@@ -1,0 +1,14 @@
+.form-control{
+   width: calc(100% * 6 / 7) !important;
+   border-radius: 20px !important;
+   margin-left: calc(100% * 1/14);
+}
+
+.form-label {
+   margin-left: calc(100% * 1/14 + 19px);
+}
+
+.invalid-feedback {
+   margin-left: calc(100% * 1/14 + 19px);
+}
+
