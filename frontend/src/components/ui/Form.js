@@ -194,9 +194,9 @@ const Form = ({
    return (
       <form className={`form-group ${className}`} onSubmit={handleSubmit}>
          {title && (
-            <h2 className="form-title mb-4 text-center">
+            <h3 className="form-title mb-4 text-center">
                {title}
-            </h2>
+            </h3>
          )}
 
          {formError && (

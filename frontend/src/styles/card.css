@@ -1,0 +1,19 @@
+.card {
+   background-color: #E9ECEF;
+   box-shadow: 0 0 5px 5px #0A9396 !important;
+   display: flex;
+   flex-direction: column;
+}
+
+.cards {
+   background-color: #E9ECEF;
+   padding-top: 30px;
+   padding-bottom: 50px;
+   padding-right: 30px;
+   padding-left: 30px;
+   border-radius: 30px;
+   box-shadow: 0 0 5px 5px #0A9396 !important;
+}
+
+
+

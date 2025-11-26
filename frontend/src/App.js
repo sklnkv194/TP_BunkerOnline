@@ -3,6 +3,7 @@ import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import ForgetPasswordPage from './pages/ForgetPasswordPage';
 import NewPasswordPage from './pages/NewPasswordPage';
+import MainPage from './pages/MainPage';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -33,6 +34,10 @@ function App() {
         <Route 
           path="/register" 
           element={<RegisterPage />} 
+        />
+        <Route 
+          path="/main" 
+          element={<MainPage />} 
         />
         <Route 
           path="/forget_password" 
