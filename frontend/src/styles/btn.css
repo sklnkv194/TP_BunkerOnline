@@ -1,3 +1,7 @@
+.btn-lg {
+  padding-left: 3rem !important;
+  padding-right: 3rem !important;
+}
 
 .btn-primary{
   background-color: #0A9396 !important;

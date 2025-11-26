@@ -5,6 +5,8 @@ import './styles/btn.css';
 import './styles/input.css';
 import './styles/form.css';
 import './styles/main.css';
+import './styles/card.css'
+import './styles/font.css'
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 

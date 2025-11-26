@@ -1,7 +1,6 @@
 import Form from "../../ui/Form";
 import { useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import { useRef } from 'react';
 import { PostService } from "../../../scripts/post-service";
 
 const RegistrationForm = ({className=""}) => {
@@ -56,14 +55,12 @@ const RegistrationForm = ({className=""}) => {
       try{
          setLoading(true);
          const result = await PostService.postData('http://localhost:8000/registration/', {
-               mickname: formData.nickname,
+               nickname: formData.nickname,
                email: formData.email,
                password: formData.password,
                password_conf: formData.password_conf
             }, 'form');
          if (result && result.ok){
-            localStorage.setItem('token', result.token);
-            localStorage.setItem('id', result.user.id);
             navigate("/home");
          } else if (result.error) {
             setInternalError(result.error);
