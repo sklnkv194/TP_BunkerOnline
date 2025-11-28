@@ -47,7 +47,7 @@ const LoginForm = ({className=""}) => {
             navigate("/home");
          } else if (result.error) {
             localStorage.setItem('token', result.token);
-            localStorage.setItem('id', result.user.id);
+            localStorage.setItem('id', result.id);
             setInternalError(result.error);
          }
       } catch (error) {
