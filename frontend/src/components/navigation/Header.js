@@ -24,7 +24,7 @@ const Header = ({}) => {
                <div className="col-3"></div>
                
                <div className="col-6 text-center">
-                  <a href="/home">
+                  <a href="/main">
                      <Logo width="30%" height="100%" />
                   </a>
                </div>

@@ -6,11 +6,12 @@ import MainDescriptionCard from "../components/main/MainDescriptionCard";
 import MainStatistic from "../components/main/MainStatistic";
 
 const MainPage = () => {
+   const user = localStorage.getItem('id');
    return (
       <PageLayout>
          <Header/>
          <div className="w-75 mx-auto d-flex justify-content-between">
-            <ConnectToRoomForm/>
+            <ConnectToRoomForm id={user}/>
             <PaidDeckCards/>
          </div>
          <div className="w-75 mx-auto pb-5">

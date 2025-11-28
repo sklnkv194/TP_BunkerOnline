@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import { PostService } from "../../scripts/post-service";
 
-const ConnectToRoomForm = ({className=""}) => {
+const ConnectToRoomForm = ({id=""}) => {
 
    const navigate = useNavigate();
 
@@ -49,7 +49,6 @@ const ConnectToRoomForm = ({className=""}) => {
 
    return (
       <Form
-         className={`${className}`}
          title="Подключиться к комнате"
          fields={connectToRoomFields}
          button={connectToRoomButton}

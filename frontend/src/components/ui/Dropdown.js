@@ -21,38 +21,39 @@ const Dropdown = ({
 
 
    return (
-      <div className={wrapperClass}>
+      <div className={`${wrapperClass} dropdown`}>
          {label && (
-         <label htmlFor={name} className="form-label">
+         <label htmlFor={name} className="form-label-dropdown">
             {label}
          </label>
          )}
          
          <select
-         className={`form-select ${error ? 'is-invalid' : ''} ${selectClass}`}
-         id={name}
-         name={name}
-         value={value}
-         required={required}
-         disabled={disabled}
-         onChange={handleChange}
-         {...props}
-         >
-         {placeholder && (
-            <option value="" disabled>
-               {placeholder}
-            </option>
-         )}
-         
-         {options.map((option, index) => (
-            <option 
-               key={option.value || option.id || index} 
-               value={option.value}
-               disabled={option.disabled}
+            className={`form-select ${error ? 'is-invalid' : ''} ${selectClass}`}
+            style={{borderRadius: '20px'}}
+            id={name}
+            name={name}
+            value={value}
+            required={required}
+            disabled={disabled}
+            onChange={handleChange}
+            {...props}
             >
-               {option.label || option.text || option.value}
-            </option>
-         ))}
+            {placeholder && (
+               <option value="" disabled>
+                  {placeholder}
+               </option>
+            )}
+            
+            {options.map((option, index) => (
+               <option 
+                  key={option.value || option.id || index} 
+                  value={option.value}
+                  disabled={option.disabled}
+               >
+                  {option.label || option.text || option.value}
+               </option>
+            ))}
          </select>
          
          {error && (
