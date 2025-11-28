@@ -3,8 +3,11 @@ import { useState, useEffect } from "react";
 import { GetService } from "../../scripts/get-service";
 import ChangeNicknameForm from "./ChangeNicknameForm";
 import ChangePasswordForm from "./ChangePasswordForm";
+import { useNavigate } from "react-router-dom";
 
 const InfoAboutUserForm = ({ show = false, onClose, id }) => {
+   const navigate = useNavigate();
+
    const [data, setData] = useState(null);
    const [loading, setLoading] = useState(false);
    const [internalError, setInternalError] = useState("");
@@ -100,7 +103,15 @@ const InfoAboutUserForm = ({ show = false, onClose, id }) => {
       },
    ];
 
-
+   const logoutButton = {
+      children: 'Выйти из аккаунта',
+      size: "md"
+   };
+   
+   const handleLogout = () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("id");
+   }
    
 
    return (
@@ -110,6 +121,8 @@ const InfoAboutUserForm = ({ show = false, onClose, id }) => {
             title="Информация обо мне"
             fields={infoFields}
             formError={internalError}
+            button={logoutButton}
+            onSubmit={handleLogout} 
             >
          </Form>
          <ChangeNicknameForm
