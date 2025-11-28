@@ -68,7 +68,6 @@ const InputWithLabel = ({
       }
    };
 
-    console.log("🔍 InputWithLabel props:", { name, del, delClick, value });
    return (
       <div className={wrapperClass}>
          {label && <label className="form-label">{label}</label>}

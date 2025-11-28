@@ -61,9 +61,9 @@ const RegistrationForm = ({className=""}) => {
                password_conf: formData.password_conf
             }, 'form');
          if (result && result.ok){
-            navigate("/home");
-         } else if (result.error) {
-            setInternalError(result.error);
+            navigate("/");
+         } else {
+            setInternalError(result.data.error);
          }
       } catch (error) {
          setInternalError(error.data);

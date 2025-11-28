@@ -36,8 +36,8 @@ const ConnectToRoomForm = ({id=""}) => {
             }, 'form');
          if (result && result.ok){
             navigate("/wait_for_game")
-         } else if (result.error) {
-            setInternalError(result.error);
+         } else {
+            setInternalError(result.data.error);
          }
       } catch (error) {
          setInternalError(error.message);

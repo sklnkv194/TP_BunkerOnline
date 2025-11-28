@@ -45,8 +45,8 @@ const NewPasswordForm = ({className=""}) => {
          if (result && result.ok){
             localStorage.removeItem('is_email_forget_password');
             navigate("/");
-         } else if (result.error) {
-            setInternalError(result.error);
+         } else {
+            setInternalError(result.data.error);
          }
       } catch (error) {
          setInternalError(error.message);

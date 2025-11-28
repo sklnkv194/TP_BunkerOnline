@@ -54,7 +54,7 @@ const ChangePasswordForm = ({ show = false, onClose, id }) => {
             new_password_conf: formData.new_password_conf
          }, 'form', token);
          
-         if (result.success){
+         if (result.ok){
             setInternalSuccess("Информация успешно обновлена!");
             setTimeout(() => {
                onClose();

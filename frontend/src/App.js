@@ -59,8 +59,9 @@ function App() {
           path="/personal_account" 
           element={
             isAuthenticated() ? 
-            <PersonalAccountPage />:
-            <Navigate to="/personal_account" replace /> 
+            
+            <Navigate to="/" replace /> :
+            <PersonalAccountPage />
            
           } 
         />
