@@ -43,8 +43,6 @@ function App() {
         <Route 
           path="/forget_password" 
           element={
-            isEmailForgetPassword ? 
-            <Navigate to="/" replace /> :
             <ForgetPasswordPage /> 
           } 
         />
