@@ -43,12 +43,12 @@ const LoginForm = ({className=""}) => {
                email: formData.email,
                password: formData.password
             }, 'form');
-         if (result && result.token){
+         if (result && result.ok){
             localStorage.setItem('token', result.token);
             localStorage.setItem('id', result.id);
             navigate("/personal_account");
-         } else if (result.error) {
-            setInternalError(result.error);
+         } else {
+            setInternalError(result.data.error);
          }
       } catch (error) {
          setInternalError(error.data);

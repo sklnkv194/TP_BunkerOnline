@@ -37,8 +37,8 @@ const ForgetPasswordForm = ({className=""}) => {
          if (result && result.ok){
             localStorage.setItem('is_email_forget_password', true);
             setInternalSuccess(result.success);
-         } else if (result.error) {
-            setInternalError(result.error);
+         } else {
+            setInternalError(result.data.error);
          }
       } catch (error) {
          setInternalError(error.message);

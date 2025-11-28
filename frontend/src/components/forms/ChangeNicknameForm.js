@@ -24,10 +24,9 @@ const ChangeNicknameForm = ({ show = false, onClose, id }) => {
                
                if (result.data) {
                   setData(result.data);
-               }
+               } 
             } catch (error) {
                setInternalError("Ошибка при получении данных");
-               console.error('Error:', error);
             } finally {
                setLoading(false);
             }

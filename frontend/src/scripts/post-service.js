@@ -32,9 +32,16 @@ export class PostService {
             body: body,
             credentials: 'include'  
          });
-         console.log('Actual Content-Type:', headers['Content-Type']);
-         if (!response.ok) throw new Error('Ошибка сервера');
-         return await response.json();
+         
+         const result = await response.json();
+         
+         // ✅ Возвращаем объект с статусом и данными
+         return {
+            ok: response.ok,
+            status: response.status,
+            data: result
+         };
+         
       } catch (error) {
          console.error('Ошибка при отправке данных:', error);
          throw error;

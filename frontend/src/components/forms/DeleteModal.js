@@ -22,15 +22,13 @@ const DeleteModal = ({ show = false, onClose, id, url }) => {
          const result = await DeleteService.deleteData(`${url}/${id}/`,
             token);
          
-         if (result.success){
+         if (result.ok){
             setInternalSuccess("Успешно удалено!");
             setTimeout(() => {
                onClose();
                window.location.reload();
             }, 2000);
          }
-         console.log(id)
-         console.log(result)
       } catch (error) {
          setInternalError(error.data || "Произошла ошибка при удалении");
       } finally {
