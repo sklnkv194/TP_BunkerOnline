@@ -43,11 +43,11 @@ const LoginForm = ({className=""}) => {
                email: formData.email,
                password: formData.password
             }, 'form');
-         if (result && result.ok){
-            navigate("/home");
-         } else if (result.error) {
+         if (result && result.token){
             localStorage.setItem('token', result.token);
             localStorage.setItem('id', result.id);
+            navigate("/personal_account");
+         } else if (result.error) {
             setInternalError(result.error);
          }
       } catch (error) {
