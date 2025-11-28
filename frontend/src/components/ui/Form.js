@@ -9,9 +9,9 @@ import { Link } from "react-router-dom";
 const Form = ({ 
    title, 
    fields, 
-   button, 
+   button = null, 
    className = "", 
-   onSubmit, 
+   onSubmit = null, 
    formError = "", 
    formSuccess="", 
    link = "",
@@ -20,7 +20,13 @@ const Form = ({
    secondLinkTo = ""
  }) => {
    const [formData, setFormData] = useState({});
-   const [errors, setErrors] = useState({});
+
+   const handleInputChange = (fieldName, value) => {
+      setFormData(prev => ({
+         ...prev, 
+         [fieldName]: value
+      }));
+   };
 
    useEffect(() => {
       const initialData = {};
@@ -35,96 +41,11 @@ const Form = ({
    const handleSubmit = (event) => {
       event.preventDefault();
 
-      const newErrors = validateForm(formData, fields || []);
-      if (Object.keys(newErrors).length > 0) {
-         setErrors(newErrors);
-         return;
-      }
-
       if (onSubmit){
          onSubmit(formData);
       }
    };
 
-   const handleInputChange = (fieldName, value) => {
-      setFormData(prev => ({
-         ...prev, 
-         [fieldName]: value
-      }));
-
-      if (errors[fieldName]) {
-         setErrors(prev => ({
-            ...prev,
-            [fieldName]: ""
-         }));
-      }
-   };
-
-   const validateField = (field, value) => {
-      if (field.required) {
-         if (field.type === 'checkbox'){
-            if (!value) {
-               return field.invalid || 'Это поле обязательно';
-            }
-         } else {
-            if (!value?.toString().trim()) {
-               return field.invalid || 'Это поле обязательно';
-            }
-         }
-      }
-
-      if (field.type === "password"){
-         if (value && value.length < 8){
-            let passwordError = "Пароль должен содержать не менее 8 символов"
-            let newError = field.error ? field.error : passwordError
-            return newError
-         }
-      }
-
-      if (field.name === "nickname" && value.length < 3){
-         let nicknameError = "Никнейм должен содержать не менее 3 символов"
-         let newError = field.error ? field.error : nicknameError
-            return newError
-      }
-
-      if (field.type === "number"){
-         if (value && value.length > 5){
-            let digitsError = "Слишком большое значение"
-            let newError = field.error ? field.error : digitsError
-            return newError
-         }
-         
-         if (value && !/^\d+$/.test(value)) {
-            let digitsError = "Разрешены только цифры"
-            let newError = field.error ? field.error : digitsError
-            return newError
-         }
-      }
-
-      if (value && field.type === "email"){
-         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-         if (!emailRegex.test(value) || value.length > 254) {
-            let emailError = "Введите корректный адрес почты"
-            let newError = field.error ? field.error : emailError
-            return newError
-         }
-      }
-
-      return "";
-   };
-
-   const validateForm = (data, fields) => {
-      const errors = {};
-
-      fields.forEach(field => {
-         const error = validateField(field, data[field.name]);
-         if (error) {
-            errors[field.name] = error;
-         }
-      });
-
-      return errors;
-   }
 
    const renderField = (field, index) => {
       const fieldKey = field.id || field.name || `field-${index}`;
@@ -142,13 +63,16 @@ const Form = ({
                   placeholder={field.placeholder}
                   label={field.label}
                   name={field.name}
-                  onChange={handleInputChange}
                   required={field.required}
                   value={formData[field.name] || ''}
-                  error={errors[field.name]}
                   disabled={field.disabled}
                   wrapperClass={field.wrapperClass}     
                   inputClass={field.inputClass}
+                  onChange={handleInputChange}
+                  edit={field.edit}
+                  editClick={field.editClick}
+                  del={field.del}
+                  delClick={field.delClick}
                />
             );
          
@@ -160,11 +84,10 @@ const Form = ({
                   placeholder={field.placeholder}
                   label={field.label}
                   name={field.name}
-                  onChange={handleInputChange}
                   required={field.required}
                   value={formData[field.name] || ''}
-                  error={errors[field.name]}
                   disabled={field.disabled}
+                  onChange={handleInputChange}
                   wrapperClass={field.wrapperClass}     
                   inputClass={field.inputClass}
                />
@@ -177,10 +100,9 @@ const Form = ({
                   checked={formData[field.name] || field.value || ''}
                   label={field.label}
                   name={field.name}
-                  onChange={handleInputChange}
                   required={field.required}
-                  error={errors[field.name]}
                   disabled={field.disabled}
+                  onChange={handleInputChange}
                   wrapperClass={field.wrapperClass}     
                   inputClass={field.inputClass}
                />
@@ -213,15 +135,18 @@ const Form = ({
 
          {fields?.map((field, index) => renderField(field, index))}
 
-         <Button 
-            type="submit"
-            variant={button?.variant}
-            disabled={button?.disabled}
-            className={`${button?.className} mt-4 d-block mx-auto w-50`}
-            size={button?.size}
-         >
-            {button?.children}
-         </Button>
+         {button && (
+            <Button 
+               type="submit"
+               variant={button?.variant}
+               disabled={button?.disabled}
+               className={`${button?.className} mt-4 d-block mx-auto w-50`}
+               size={button?.size}
+            >
+               {button.children}
+            </Button>
+         )}
+         
          {link && (
             <div className="text-center mt-3">
                <Link to={linkTo} className="text-decoration-none">

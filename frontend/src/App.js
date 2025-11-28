@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import ForgetPasswordPage from './pages/ForgetPasswordPage';
 import NewPasswordPage from './pages/NewPasswordPage';
 import MainPage from './pages/MainPage';
+import PersonalAccountPage from './pages/PeronalAccountPage';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -54,6 +55,10 @@ function App() {
             <Navigate to="/" replace /> :
             <NewPasswordPage /> 
           } 
+        />
+        <Route 
+          path="/personal_account" 
+          element={<PersonalAccountPage />} 
         />
       </Routes>
     </Router>

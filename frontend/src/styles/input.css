@@ -12,3 +12,16 @@
    margin-left: calc(100% * 1/14 + 19px);
 }
 
+.dropdown {
+   width: calc(100% * 6 / 7) !important;
+   margin-left: calc(100% * 1/14);
+}
+
+.form-label-dropdown {
+   margin-left: calc(100% * 1/14);
+   margin-bottom: 0.5rem;
+}
+
+.alert {
+   text-align: center !important;
+}
