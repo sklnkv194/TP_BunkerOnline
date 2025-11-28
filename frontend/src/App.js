@@ -28,7 +28,7 @@ function App() {
           path="/" 
           element={
             isAuthenticated() ? 
-            <Navigate to="/home" replace /> :
+            <Navigate to="/personal_account" replace /> :
             <LoginPage /> 
           } 
         />
@@ -50,13 +50,19 @@ function App() {
           path="/new_password" 
           element={
             isEmailForgetPassword ? 
-            <Navigate to="/" replace /> :
-            <NewPasswordPage /> 
+            <NewPasswordPage />  :
+            <Navigate to="/" replace /> 
+          
           } 
         />
         <Route 
           path="/personal_account" 
-          element={<PersonalAccountPage />} 
+          element={
+            isAuthenticated() ? 
+            <PersonalAccountPage />:
+            <Navigate to="/personal_account" replace /> 
+           
+          } 
         />
       </Routes>
     </Router>
