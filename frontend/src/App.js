@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import ForgetPasswordPage from './pages/ForgetPasswordPage';
 import NewPasswordPage from './pages/NewPasswordPage';
 import MainPage from './pages/MainPage';
+import DeckPage from './pages/DeckPage';
 import PersonalAccountPage from './pages/PeronalAccountPage';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -61,7 +62,14 @@ function App() {
             isAuthenticated() ? 
             <PersonalAccountPage /> :
             <Navigate to="/" replace /> 
-           
+          } 
+        />
+         <Route 
+          path="/deck/:deck_id"
+          element={
+            isAuthenticated() ? 
+            <DeckPage /> :
+            <Navigate to="/" replace /> 
           } 
         />
       </Routes>
