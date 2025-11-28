@@ -8,3 +8,12 @@
    display: flex;
    flex-direction: column;
 }
+
+.accordion-button:not(.collapsed) {
+  background-color: #94D2BD !important;
+}
+
+.accordion-button {
+  background-color: #0A9396 !important;
+  color: #ffffff !important;
+}

@@ -1,4 +1,5 @@
 import Form from "../ui/Form";
+import Button from "../ui/Button";
 import { useState, useEffect } from "react";
 import { GetService } from "../../scripts/get-service";
 import DeleteModal from "./DeleteModal";
@@ -93,6 +94,13 @@ const DecksForm = ({ id }) => {
             formError={internalError}
             >
          </Form>
+         <Button 
+            className="mt-3"
+            variant="primary"
+            disabled={loading}
+         >
+            <i className="bi bi-plus-circle"></i> Добавить колоду
+         </Button>
          <DeleteModal
             url="http://localhost:8000/decks"
             id={selectedDeckId}

@@ -11,7 +11,7 @@ const Header = ({}) => {
 
    const navigate = useNavigate();
    const goHome = () => {
-      navigate("/home");
+      navigate("/personal_account");
    }
 
    const goLogin = () => {
