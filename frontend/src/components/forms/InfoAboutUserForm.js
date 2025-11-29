@@ -47,34 +47,38 @@ const InfoAboutUserForm = ({ show = false, onClose, id }) => {
 
 
    useEffect(() => {
-      if (show) {
-         setLoading(true);
-         setInternalError("");
-         setData(null);
-         const token = localStorage.getItem('token');
-         const getInfo = async () => {
-            setLoading(true);
-            try {
-               const result = await GetService.getData(`http://localhost:8000/user/${id}`, 
-                  token
-               );
-               
-               if (result.data) {
-                  setData(result.data);
-               }
-            } catch (error) {
-               setInternalError("Ошибка при получении данных");
-               console.error('Error:', error);
-            } finally {
-               setLoading(false);
+   if (show && id) {
+      setLoading(true);
+      setInternalError("");
+      setData(null);
+      const token = localStorage.getItem('token');
+      const getInfo = async () => {
+         try {
+            const url = `http://localhost:8000/api/users/user/${id}/`;
+            const result = await GetService.getData(url, token);
+            
+            if (result && result.nickname) {
+               setData(result);
+            } else if (result && result.error) {
+               setInternalError(result.error);
+            } else {
+               setInternalError("Неизвестная ошибка");
             }
-         };
-
-         if (token) {
-            getInfo();
+         } catch (error) {
+            setInternalError("Ошибка при получении данных: " + error.message);
+         } finally {
+            setLoading(false);
          }
+      };
+
+      if (token) {
+         getInfo();
+      } else {
+         setInternalError("Нет авторизации");
+         setLoading(false);
       }
-   }, [show]);
+   }
+}, [show, id]);
 
 
 

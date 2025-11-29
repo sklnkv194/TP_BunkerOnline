@@ -10,7 +10,7 @@ const PersonalAccountPage = () => {
       <PageLayout>
          <Header/>
          <div className="w-75 mx-auto d-flex justify-content-between mb-5">
-            <InfoAboutUserForm id={user}/>
+            <InfoAboutUserForm show={true} id={user} />
             <CreateRoomForm id={user}/>
          </div>
          <div className="w-75 mx-auto d-flex justify-content-between mt-5">
