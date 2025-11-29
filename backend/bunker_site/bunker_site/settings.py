@@ -122,16 +122,14 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Email settings (для сброса пароля)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Для разработки
+# временно для тестов
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# Добавьте в конец settings.py
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
 
-# Временное отключение CSRF для тестирования
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_HTTPONLY = False
 

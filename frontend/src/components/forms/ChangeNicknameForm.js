@@ -18,13 +18,15 @@ const ChangeNicknameForm = ({ show = false, onClose, id }) => {
          const getInfo = async () => {
             setLoading(true);
             try {
-               const result = await GetService.getData(`http://localhost:8000/user/${id}`, 
-                  token
-               );
+               const result = await GetService.getData(`http://localhost:8000/api/users/user/${id}/`,
+                     token
+                  );
                
                if (result.data) {
                   setData(result.data);
-               } 
+               } else if (result.nickname) {
+                  setData(result);
+               }
             } catch (error) {
                setInternalError("Ошибка при получении данных");
             } finally {
@@ -43,11 +45,12 @@ const ChangeNicknameForm = ({ show = false, onClose, id }) => {
    const editFields = [
       {
          value: data?.nickname || '',
-         id: 'name',
+         id: 'nickname',
          type: 'text',
-         name: 'name',
+         name: 'nickname',
          label: 'Никнейм',
-         wrapperClass: 'mb-3'
+         wrapperClass: 'mb-3',
+         required: true
       }
    ];
 
@@ -62,18 +65,35 @@ const ChangeNicknameForm = ({ show = false, onClose, id }) => {
       setInternalSuccess("");
       try{
          setLoading(true);
-         const result = await EditService.editData(`http://localhost:8000/user/edit/nickname`,
+         const result = await EditService.editData(`http://localhost:8000/api/users/user/${id}/update-nickname/`,
             {
-            id: id,
-            nickname: formData.nickname,
-         }, 'form', token);
+               nickname: formData.nickname,
+            }, 'json', token);
          
-         if (result.success){
-            setInternalSuccess("Информация успешно обновлена!");
+         if (result && result.ok) {
+            setInternalSuccess("Никнейм успешно изменен!");
             setTimeout(() => {
                onClose();
                window.location.reload();
             }, 2000);
+         } else if (result && result.success) {
+            setInternalSuccess("Никнейм успешно изменен!");
+            setTimeout(() => {
+               onClose();
+               window.location.reload();
+            }, 2000);
+         } else if (result && result.data && result.data.success) {
+            setInternalSuccess("Никнейм успешно изменен!");
+            setTimeout(() => {
+               onClose();
+               window.location.reload();
+            }, 2000);
+         } else if (result && result.error) {
+            setInternalError(result.error);
+         } else if (result && result.data && result.data.error) {
+            setInternalError(result.data.error);
+         } else {
+            setInternalError("Произошла неизвестная ошибка");
          }
       } catch (error) {
          setInternalError(error.data || "Произошла ошибка при редактировании");
@@ -108,17 +128,17 @@ const ChangeNicknameForm = ({ show = false, onClose, id }) => {
             onClick={onClose}
             aria-label="Close"
          ></button>
-            <Form
-               key={JSON.stringify(data)}
-               title="Смена никнейма"
-               fields={editFields}
-               button={editButton}
-               onSubmit={handleEdit}  
-               formError={internalError}
-               formSuccess={internalSuccess}
-            />
+         <Form
+            key={JSON.stringify(data)}
+            title="Смена никнейма"
+            fields={editFields}
+            button={editButton}
+            onSubmit={handleEdit}  
+            formError={internalError}
+            formSuccess={internalSuccess}
+         />
       </div>
-  
+
    );
 };
 

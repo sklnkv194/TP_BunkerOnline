@@ -37,25 +37,30 @@ const LoginForm = ({className=""}) => {
    };
 
    const handleLogin = async (formData) => {
-      try{
-         setLoading(true);
-         const result = await PostService.postData('http://localhost:8000/login/', {
-               email: formData.email,
-               password: formData.password
-            }, 'form');
-         if (result && result.ok){
-            localStorage.setItem('token', result.token);
-            localStorage.setItem('id', result.id);
-            navigate("/personal_account");
-         } else {
-            setInternalError(result.data.error);
-         }
-      } catch (error) {
-         setInternalError(error.data);
-      } finally {
-         setLoading(false);
+   try{
+      setLoading(true);
+      const result = await PostService.postData('http://localhost:8000/login/', {
+            email: formData.email,
+            password: formData.password
+         }, 'form');
+      if (result.data && result.data.token && result.data.id){
+         localStorage.setItem('token', result.data.token);
+         localStorage.setItem('id', result.data.id.toString());
+         
+         // Пробуем навигацию
+         window.location.href = "/personal_account";
+         
+      } else if (result.data && result.data.error) {
+         setInternalError(result.data.error);
+      } else {
+         setInternalError("Ошибка при входе");
       }
-   };
+   } catch (error) {
+      setInternalError(error.message || "Ошибка при входе в систему");
+   } finally {
+      setLoading(false);
+   }
+};
 
 
    return (

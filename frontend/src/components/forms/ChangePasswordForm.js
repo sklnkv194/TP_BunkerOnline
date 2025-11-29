@@ -41,32 +41,35 @@ const ChangePasswordForm = ({ show = false, onClose, id }) => {
    };
 
    const handleEdit = async (formData) => {
-      const token = localStorage.getItem('token');
-      setInternalError("");
-      setInternalSuccess("");
-      try{
-         setLoading(true);
-         const result = await EditService.editData(`http://localhost:8000/user/edit/password`,
-            {
-            id: id,
+   const token = localStorage.getItem('token');
+   setInternalError("");
+   setInternalSuccess("");
+   try{
+      setLoading(true);
+      const result = await EditService.editData(`http://localhost:8000/api/users/user/${id}/change-password/`,
+         {
             current_password: formData.current_password,
             new_password: formData.new_password,
             new_password_conf: formData.new_password_conf
-         }, 'form', token);
-         
-         if (result.ok){
-            setInternalSuccess("Информация успешно обновлена!");
-            setTimeout(() => {
-               onClose();
-               window.location.reload();
-            }, 2000);
-         }
-      } catch (error) {
-         setInternalError(error.data || "Введен недействительный пароль или пароли не совпадают");
-      } finally {
-         setLoading(false);
+         }, 'json', token);
+      
+      
+      if (result && result.ok){
+         setInternalSuccess("Пароль успешно изменен!");
+         setTimeout(() => {
+            onClose();
+         }, 2000);
+      } else if (result && result.error) {
+         setInternalError(result.error);
+      } else {
+         setInternalError("Неизвестная ошибка");
       }
-   };
+   } catch (error) {
+      setInternalError(error.data || "Введен недействительный пароль или пароли не совпадают");
+   } finally {
+      setLoading(false);
+   }
+};
 
    if (!show) {
       return null;
