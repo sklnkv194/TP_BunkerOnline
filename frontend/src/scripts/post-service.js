@@ -1,6 +1,7 @@
 export class PostService {
    static async postData(url, data, contentType = 'json', authToken = null) {
       try {
+
          let body, headers = {
             'X-CSRFToken': this.getCsrfToken()
          };
@@ -32,7 +33,6 @@ export class PostService {
             body: body,
             credentials: 'include'  
          });
-         
          const result = await response.json();
          
          // ✅ Возвращаем объект с статусом и данными

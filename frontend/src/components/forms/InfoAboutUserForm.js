@@ -54,7 +54,7 @@ const InfoAboutUserForm = ({ show = false, onClose, id }) => {
       const token = localStorage.getItem('token');
       const getInfo = async () => {
          try {
-            const url = `http://localhost:8000/api/users/user/${id}/`;
+            const url = `http://localhost:8000/user/${id}/`;
             const result = await GetService.getData(url, token);
             
             if (result && result.nickname) {
@@ -115,6 +115,9 @@ const InfoAboutUserForm = ({ show = false, onClose, id }) => {
    const handleLogout = () => {
       localStorage.removeItem("token");
       localStorage.removeItem("id");
+      window.location.reload();
+      navigate("/");
+      
    }
    
 

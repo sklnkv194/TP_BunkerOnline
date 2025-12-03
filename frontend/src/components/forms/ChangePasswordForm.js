@@ -46,7 +46,7 @@ const ChangePasswordForm = ({ show = false, onClose, id }) => {
    setInternalSuccess("");
    try{
       setLoading(true);
-      const result = await EditService.editData(`http://localhost:8000/api/users/user/${id}/change-password/`,
+      const result = await EditService.editData(`http://localhost:8000/user/${id}/change-password/`,
          {
             current_password: formData.current_password,
             new_password: formData.new_password,
