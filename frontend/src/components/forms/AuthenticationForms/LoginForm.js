@@ -46,10 +46,7 @@ const LoginForm = ({className=""}) => {
       if (result.data && result.data.token && result.data.id){
          localStorage.setItem('token', result.data.token);
          localStorage.setItem('id', result.data.id.toString());
-         
-         // Пробуем навигацию
          window.location.href = "/personal_account";
-         
       } else if (result.data && result.data.error) {
          setInternalError(result.data.error);
       } else {

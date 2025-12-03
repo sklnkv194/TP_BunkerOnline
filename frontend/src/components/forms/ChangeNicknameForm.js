@@ -18,7 +18,7 @@ const ChangeNicknameForm = ({ show = false, onClose, id }) => {
          const getInfo = async () => {
             setLoading(true);
             try {
-               const result = await GetService.getData(`http://localhost:8000/api/users/user/${id}/`,
+               const result = await GetService.getData(`http://localhost:8000/user/${id}/`,
                      token
                   );
                
@@ -65,7 +65,7 @@ const ChangeNicknameForm = ({ show = false, onClose, id }) => {
       setInternalSuccess("");
       try{
          setLoading(true);
-         const result = await EditService.editData(`http://localhost:8000/api/users/user/${id}/update-nickname/`,
+         const result = await EditService.editData(`http://localhost:8000/user/${id}/update-nickname/`,
             {
                nickname: formData.nickname,
             }, 'json', token);
