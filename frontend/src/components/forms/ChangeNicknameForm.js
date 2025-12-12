@@ -76,24 +76,6 @@ const ChangeNicknameForm = ({ show = false, onClose, id }) => {
                onClose();
                window.location.reload();
             }, 2000);
-         } else if (result && result.success) {
-            setInternalSuccess("Никнейм успешно изменен!");
-            setTimeout(() => {
-               onClose();
-               window.location.reload();
-            }, 2000);
-         } else if (result && result.data && result.data.success) {
-            setInternalSuccess("Никнейм успешно изменен!");
-            setTimeout(() => {
-               onClose();
-               window.location.reload();
-            }, 2000);
-         } else if (result && result.error) {
-            setInternalError(result.error);
-         } else if (result && result.data && result.data.error) {
-            setInternalError(result.data.error);
-         } else {
-            setInternalError("Произошла неизвестная ошибка");
          }
       } catch (error) {
          setInternalError(error.data || "Произошла ошибка при редактировании");

@@ -59,10 +59,6 @@ const ChangePasswordForm = ({ show = false, onClose, id }) => {
          setTimeout(() => {
             onClose();
          }, 2000);
-      } else if (result && result.error) {
-         setInternalError(result.error);
-      } else {
-         setInternalError("Неизвестная ошибка");
       }
    } catch (error) {
       setInternalError(error.data || "Введен недействительный пароль или пароли не совпадают");
