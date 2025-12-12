@@ -9,7 +9,7 @@ const MainStatistic = ({}) => {
                   <h5 className="card-description text-center" style={{color: '#000000'}}>Активных игроков</h5>
                </div>
                <div className="col-2 card-main p-3 d-flex flex-column align-items-center" style={{backgroundColor: '#E9ECEF', borderRadius: '30px'}}>
-                  <h3 className="card-title mb-3 text-center" style={{color: '#0A9396'}}>2+</h3>
+                  <h3 className="card-title mb-3 text-center" style={{color: '#0A9396'}}>2 МЛН+</h3>
                   <h5 className="card-description text-center" style={{color: '#000000'}}>Сыгранных партий</h5>
                </div>
                <div className="col-2 card-main p-3 d-flex flex-column align-items-center" style={{backgroundColor: '#E9ECEF', borderRadius: '30px'}}>

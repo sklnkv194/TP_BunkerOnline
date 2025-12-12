@@ -15,7 +15,7 @@
   border-color: #0A9396 !important;
   border-radius: 20px !important;
   color: white !important;
-  box-shadow: 0 0 5px 5px #0A967D !important;
+  box-shadow: 0 0 2px 2px #0A967D !important;
 }
 
 .btn-secondary {
@@ -30,7 +30,7 @@
   border-color: #FF6E45 !important;
   border-radius: 20px !important;
   color: white !important;
-  box-shadow: 0 0 5px 5px #FF6E45 !important;
+  box-shadow: 0 0 2px 2px #FF6E45 !important;
 }
 
 .btn-outline-secondary {
@@ -45,6 +45,6 @@
   border-color: black !important;
   border-radius: 20px !important;
   color: black !important;
-  box-shadow: 0 0 5px 5px black !important;
+  box-shadow: 0 0 2px 2px black !important;
 }
 

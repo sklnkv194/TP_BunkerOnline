@@ -21,8 +21,8 @@ const CreateRoomForm = ({ id }) => {
             try {
                const result = await GetService.getData(`http://localhost:8000/decks/${id}/`, 
                   token);
-               if (result.data) {
-                  setDecksData(result.data);
+               if (result && result.decks) {
+                  setDecksData(result.decks);
                }
             } catch (error) {
                setInternalError("Ошибка при получении данных");
@@ -91,7 +91,8 @@ const CreateRoomForm = ({ id }) => {
             user_id: id
          }, 'json', token);
          if (result.id){
-            navigate("/wait_game")
+            const roomId = result.data.room_id;
+            navigate(`/wait_for_game/${roomId}?is_owner=true`);
          }
       } catch (error) {
          setInternalError(error.data || "Произошла ошибка при создании комнаты");

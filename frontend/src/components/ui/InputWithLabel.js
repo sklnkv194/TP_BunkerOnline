@@ -84,8 +84,8 @@ const InputWithLabel = ({
                className={`form-control ${internalError ? 'is-invalid' : ''} ${inputClass}`}
                {...props}
             />
-            {edit && <i className="bi bi-pencil-square" onClick={editClick}></i>}
-            {(del && !(value === "Стандартная")) && (<i className="bi bi-trash-fill" onClick={delClick}></i>)}
+            {edit && <i className="bi bi-pencil-square align-self-center" onClick={editClick}></i>}
+            {(del && !(value === "Стандартная")) && (<i className="bi bi-trash-fill align-self-center" onClick={delClick}></i>)}
          </div>
          
          {internalError && (

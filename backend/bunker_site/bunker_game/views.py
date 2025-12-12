@@ -77,10 +77,12 @@ def deck_create(request):
     )
     if serializer.is_valid():
         deck = serializer.save()
+        print(DeckSerializer(deck).data)
         return Response({
             'message': 'Колода успешно создана',
             'deck': DeckSerializer(deck).data
         }, status=status.HTTP_201_CREATED)
+    
     return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 @extend_schema(

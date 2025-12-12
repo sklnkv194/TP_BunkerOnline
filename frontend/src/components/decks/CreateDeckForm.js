@@ -1,26 +1,29 @@
 import Form from "../ui/Form";
+import { useState } from "react";
+import { PostService } from "../../scripts/post-service";
+import { useNavigate } from "react-router-dom";
 
 
-const CreateCardForm = ({ handleCreate, loading, onClose, internalError, internalSuccess  }) => {
+const CreateDeckForm = ({ onClose, show, onSubmit, internalSuccessCreate,internalErrorCreate}) => {
+   const navigate = useNavigate();
 
    const createFields = [
       {
-         id: 'card_name',
+         id: 'deck_name',
          type: "text",
-         name: 'card_name',
-         label: 'Название карты',
+         name: 'deck_name',
+         label: 'Название колоды',
          required: true,
          wrapperClass: 'mb-3',
-         placeholder: "Введите название карты"
+         placeholder: "Введите название колоды"
       }
    ];
 
    const createButton = {
-      children: 'Создать',
-      disabled: loading
+      children: 'Создать'
    };
 
-   
+  
 
    return (
       <div style={{
@@ -44,16 +47,17 @@ const CreateCardForm = ({ handleCreate, loading, onClose, internalError, interna
             aria-label="Close"
          ></button>
          <Form
-            title="Создать карту"
+            title="Создать колоду"
             fields={createFields}
             button={createButton}
-            onSubmit={handleCreate}  
-            formError={internalError}
-            formSuccess={internalSuccess}
+            onSubmit={onSubmit}  
+            formError={internalErrorCreate}
+            formSuccess={internalSuccessCreate}
+            show={show}
             >
          </Form>
       </div>
    );
 };
 
-export default CreateCardForm;
+export default CreateDeckForm;

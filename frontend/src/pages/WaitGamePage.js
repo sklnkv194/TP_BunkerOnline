@@ -1,20 +1,17 @@
 import Header from "../components/navigation/Header";
 import PageLayout from "../components/layout/PageLayout";
-import DeckStack from "../components/decks/DeckStack";
-import { useParams } from "react-router-dom";
+import GameWaitingForm from "../components/game/WaitGamePlayersForm";
 
-
-const DeckPage = () => {
-   const { deck_id } = useParams();
-
+const WaitGamePage = () => {
+   const user_id = localStorage.getItem('id');
    return (
       <PageLayout>
          <Header/>
          <div className="w-75 mx-auto">
-            <DeckStack deck_id={deck_id}/>
+            <GameWaitingForm/>
          </div>
       </PageLayout>
    );
 };
 
-export default DeckPage;
+export default WaitGamePage;

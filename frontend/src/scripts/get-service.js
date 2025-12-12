@@ -6,7 +6,7 @@ export class GetService {
          };
 
          if (authToken) {
-            headers['Authorization'] = `Token ${authToken}`;
+            headers['Authorization'] = `Bearer ${authToken}`;
          }
 
          const response = await fetch(url, {
@@ -14,7 +14,6 @@ export class GetService {
             headers: headers,
             credentials: 'include'  
          });
-         
          if (!response.ok) throw new Error('Ошибка сервера');
          return await response.json();
       } catch (error) {

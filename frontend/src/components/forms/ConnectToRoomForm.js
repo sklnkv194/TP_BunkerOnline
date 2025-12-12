@@ -35,7 +35,9 @@ const ConnectToRoomForm = ({id=""}) => {
                code: formData.code
             }, 'form');
          if (result && result.ok){
-            navigate("/wait_for_game")
+            const roomId = result.data.room_id;
+            const isOwner = result.data.is_owner || false;
+            navigate(`/wait_for_game/${roomId}?is_owner=false`);
          } else {
             setInternalError(result.data.error);
          }
