@@ -1,2 +1,5 @@
-/backend/bunker_site/users/__pycache__
-/backend/bunker_site/bunker_site/__pycache__
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
