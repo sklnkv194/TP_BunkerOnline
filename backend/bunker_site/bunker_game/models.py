@@ -14,7 +14,6 @@ class Deck(models.Model):
         blank=True  # Разрешаем пустое значение в формах
     )
     name = models.CharField(max_length=255, verbose_name="Название колоды")
-    description = models.TextField(verbose_name="Описание колоды")
     
     def __str__(self):
         return self.name
@@ -24,7 +23,6 @@ class Deck(models.Model):
             'id': self.id,
             'user_id': self.user_id,
             'name': self.name,
-            'description': self.description
         }
     
     class Meta:

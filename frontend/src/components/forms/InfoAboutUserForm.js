@@ -59,10 +59,6 @@ const InfoAboutUserForm = ({ show = false, onClose, id }) => {
             
             if (result && result.nickname) {
                setData(result);
-            } else if (result && result.error) {
-               setInternalError(result.error);
-            } else {
-               setInternalError("Неизвестная ошибка");
             }
          } catch (error) {
             setInternalError("Ошибка при получении данных: " + error.message);

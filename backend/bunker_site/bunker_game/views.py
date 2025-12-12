@@ -19,28 +19,9 @@ from drf_spectacular.types import OpenApiTypes
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def deck_list(request):
-    """
-    Получение списка всех колод.
-    """
     decks = Deck.objects
     serializer = DeckSerializer(decks, many=True)
     return Response({'decks': serializer.data})
-
-# @extend_schema(
-#     summary="Получение детальной информации о колоде",
-#     description="Возврат информации о конкретной колоде и её картах",
-#     responses=DeckSerializer
-# )
-# @api_view(['GET'])
-# # @permission_classes([IsAuthenticated])
-# @permission_classes([AllowAny])
-# def deck_detail(request, deck_id):
-#     """
-#     Получение детальной информации о колоде.
-#     """
-#     deck = get_object_or_404(Deck, id=deck_id)
-#     serializer = DeckSerializer(deck)
-#     return Response({'deck': serializer.data})
 
 @extend_schema(
     summary="Получение детальной информации о колоде",
@@ -50,13 +31,27 @@ def deck_list(request):
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
-def deck_detail_by_user(request, user_id):
-    """
-    Получение детальной информации о колоде.
-    """
-    decks = Deck.objects.filter(user_id=user_id)
-    serializer = DeckSerializer(decks, many=True)
-    return Response({'decks': serializer.data})
+def deck_detail(request, user_id, deck_id):
+    if (request.method == "GET"):
+        decks = Deck.objects.filter(user_id=user_id)
+        serializer = DeckSerializer(decks, many=True)
+        return Response({'decks': serializer.data})
+    
+    if (request.method == "PUT"):
+        deck = get_object_or_404(Deck, id=deck_id)
+        serializer = DeckCreateSerializer(deck, data=request.data, partial=True)
+        if serializer.is_valid():
+            deck = serializer.save()
+            return Response({
+                'message': 'Колода успешно обновлена',
+                'deck': DeckSerializer(deck).data
+            })
+        return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if (request.method == "DELETE"):
+        deck = get_object_or_404(Deck, id=deck_id)
+        deck.delete()
+        return Response({'message': 'Колода успешно удалена'})
 
 @extend_schema(
     summary="Создание новой колоды",
@@ -86,52 +81,6 @@ def deck_create(request):
     return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 @extend_schema(
-    summary="Обновление колоды",
-    description="Изменение данных существующей колоды",
-    request=DeckCreateSerializer,
-    responses=DeckSerializer
-)
-@api_view(['PUT'])
-# @permission_classes([IsAuthenticated])
-@permission_classes([AllowAny])
-def deck_update(request, deck_id):
-    """
-    Обновление колоды.
-    """
-    deck = get_object_or_404(Deck, id=deck_id)
-    serializer = DeckCreateSerializer(deck, data=request.data, partial=True)
-    if serializer.is_valid():
-        deck = serializer.save()
-        return Response({
-            'message': 'Колода успешно обновлена',
-            'deck': DeckSerializer(deck).data
-        })
-    return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-@extend_schema(
-    summary="Удаление колоды",
-    description="Мягкое удаление колоды (пометка как неактивной)",
-    responses={
-        200: {
-            "type": "object",
-            "properties": {
-                "message": {"type": "string", "example": "Колода успешно удалена"}
-            }
-        }
-    }
-)
-@api_view(['DELETE'])
-# @permission_classes([IsAuthenticated])
-@permission_classes([AllowAny])
-def deck_delete(request, deck_id):
-    """
-    Удаление колоды (настоящее удаление).
-    """
-    deck = get_object_or_404(Deck, id=deck_id)
-    deck.delete()
-    return Response({'message': 'Колода успешно удалена'})
-
-@extend_schema(
     summary="Получение списка карточек",
     description="Возврат карточек с возможностью фильтрации по колоде",
     parameters=[
@@ -148,9 +97,6 @@ def deck_delete(request, deck_id):
 # @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def card_list(request):
-    """
-    Получение списка карточек с фильтрацией по колоде.
-    """
     deck_id = request.GET.get('deck_id')
     
     if deck_id:
@@ -169,12 +115,26 @@ def card_list(request):
 # @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def card_detail(request, card_id):
-    """
-    Получение детальной информации о карточке.
-    """
-    card = get_object_or_404(Card, id=card_id)
-    serializer = CardSerializer(card)
-    return Response({'card': serializer.data})
+    if (request.method == "GET"):
+        card = get_object_or_404(Card, id=card_id)
+        serializer = CardSerializer(card)
+        return Response({'card': serializer.data})
+    
+    if (request.method == "PUT"):
+        card = get_object_or_404(Card, id=card_id)
+        serializer = CardCreateSerializer(card, data=request.data, partial=True)
+        if serializer.is_valid():
+            card = serializer.save()
+            return Response({
+                'message': 'Карточка успешно обновлена',
+                'card': CardSerializer(card).data
+            })
+        return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if (request.method == "DELETE"):
+        card = get_object_or_404(Card, id=card_id)
+        card.delete()
+        return Response({'message': 'Карточка успешно удалена'})
 
 @extend_schema(
     summary="Создание новой карточки",
@@ -186,9 +146,6 @@ def card_detail(request, card_id):
 # @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def card_create(request):
-    """
-    Создание новой карточки.
-    """
     serializer = CardCreateSerializer(data=request.data)
     if serializer.is_valid():
         card = serializer.save()
@@ -199,51 +156,6 @@ def card_create(request):
     return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 @extend_schema(
-    summary="Обновление карточки",
-    request=CardCreateSerializer,
-    responses=CardSerializer
-)
-@api_view(['PUT'])
-# @permission_classes([IsAuthenticated])
-@permission_classes([AllowAny])
-def card_update(request, card_id):
-    """
-    Обновление карточки.
-    """
-    card = get_object_or_404(Card, id=card_id)
-    serializer = CardCreateSerializer(card, data=request.data, partial=True)
-    if serializer.is_valid():
-        card = serializer.save()
-        return Response({
-            'message': 'Карточка успешно обновлена',
-            'card': CardSerializer(card).data
-        })
-    return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-@extend_schema(
-    summary="Удаление карточки",
-    description="Мягкое удаление карточки",
-    responses={
-        200: {
-            "type": "object",
-            "properties": {
-                "message": {"type": "string", "example": "Карточка успешно удалена"}
-            }
-        }
-    }
-)
-@api_view(['DELETE'])
-# @permission_classes([IsAuthenticated])
-@permission_classes([AllowAny])
-def card_delete(request, card_id):
-    """
-    Удаление карточки (настоящее удаление).
-    """
-    card = get_object_or_404(Card, id=card_id)
-    card.delete()
-    return Response({'message': 'Карточка успешно удалена'})
-
-@extend_schema(
     summary="Получение всех карточек колоды",
     description="Возврат всех карточек принадлежащих указанной колоде",
     responses=DeckSerializer
@@ -252,9 +164,6 @@ def card_delete(request, card_id):
 # @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def deck_cards(request, deck_id):
-    """
-    Получение всех карточек конкретной колоды.
-    """
     deck = get_object_or_404(Deck, id=deck_id)
     serializer = DeckSerializer(deck)
     return Response(serializer.data)

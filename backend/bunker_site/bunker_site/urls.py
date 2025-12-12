@@ -38,17 +38,13 @@ urlpatterns = [
     # Колоды
     path('decks/', deck_list, name='deck-list'),
     path('decks/create/', deck_create, name='deck-create'),
-    path('decks/<int:user_id>/', deck_detail_by_user, name='deck-detail'),
-    path('decks/<int:deck_id>/update/', deck_update, name='deck-update'),
-    path('decks/<int:deck_id>/delete/', deck_delete, name='deck-delete'),
+    path('decks/<int:user_id>/', deck_detail, name='deck-detail'),
     path('decks/<int:deck_id>/cards/', deck_cards, name='deck-cards'),
     
     # Карточки
     path('cards/', card_list, name='card-list'),
     path('cards/create/', card_create, name='card-create'),
     path('cards/<int:card_id>/', card_detail, name='card-detail'),
-    path('cards/<int:card_id>/update/', card_update, name='card-update'),
-    path('cards/<int:card_id>/delete/', card_delete, name='card-delete'),
 
     # Swagger/OpenAPI
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
