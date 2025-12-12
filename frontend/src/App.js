@@ -5,7 +5,8 @@ import ForgetPasswordPage from './pages/ForgetPasswordPage';
 import NewPasswordPage from './pages/NewPasswordPage';
 import MainPage from './pages/MainPage';
 import DeckPage from './pages/DeckPage';
-import PersonalAccountPage from './pages/PeronalAccountPage';
+import PersonalAccountPage from './pages/PersonalAccountPage';
+import WaitGamePage from './pages/WaitGamePage';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -62,15 +63,21 @@ function App() {
             isAuthenticated() ? 
             <PersonalAccountPage /> :
             <Navigate to="/" replace /> 
+            
           } 
         />
-         <Route 
+        <Route 
           path="/deck/:deck_id"
           element={
             isAuthenticated() ? 
             <DeckPage /> :
             <Navigate to="/" replace /> 
+            
           } 
+        />
+        <Route 
+          path="/wait_for_game/:game_id" 
+          element={<WaitGamePage />} 
         />
       </Routes>
     </Router>

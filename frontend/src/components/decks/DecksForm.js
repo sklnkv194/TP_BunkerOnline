@@ -2,20 +2,24 @@ import Form from "../ui/Form";
 import Button from "../ui/Button";
 import { useState, useEffect } from "react";
 import { GetService } from "../../scripts/get-service";
-import DeleteModal from "./DeleteModal";
+import DeleteModal from "../forms/DeleteModal";
 import { useNavigate } from "react-router-dom";
+import CreateDeckForm from "./CreateDeckForm";
+import { PostService } from "../../scripts/post-service";
 
-
-const DecksForm = ({ id }) => {
+const DecksForm = ({ user_id }) => {
 
    const navigate = useNavigate();
-
    const [loading, setLoading] = useState(false);
    const [internalError, setInternalError] = useState("");
    const [decksData, setDecksData] = useState([]);
    const [decks, setDecks] = useState([]);
    const [showDeleteModal, setShowDeleteModal] = useState(false);
+   const [showAddModal, setShowAddModal] = useState(false);
    const [selectedDeckId, setSelectedDeckId] = useState(null);
+   
+   const [internalErrorCreate, setInternalErrorCreate] = useState("");
+   const [internalSuccessCreate, setInternalSuccessCreate] = useState("");
 
    useEffect(() => {
     
@@ -24,10 +28,10 @@ const DecksForm = ({ id }) => {
          const getDecksInfo = async () => {
             setLoading(true);
             try {
-               const result = await GetService.getData(`http://localhost:8000/decks/${id}/`, 
+               const result = await GetService.getData(`http://localhost:8000/decks/${user_id}/`, 
                   token);
-               if (result.data) {
-                  setDecksData(result.data);
+               if (result && result.decks) {
+                  setDecksData(result.decks);
                }
             } catch (error) {
                setInternalError("Ошибка при получении данных");
@@ -39,7 +43,7 @@ const DecksForm = ({ id }) => {
             getDecksInfo();
          }
   
-   }, []);
+   }, [user_id]);
 
   useEffect(() => {
       const getDecks = () => {
@@ -50,7 +54,6 @@ const DecksForm = ({ id }) => {
             value: deck.name,
             disabled: true,
             wrapperClass: 'mb-3',
-            inputClass: 'form-control-lg',
             del: true,
             delClick: () => deleteComponent(deck.id),
             edit: true,
@@ -66,6 +69,10 @@ const DecksForm = ({ id }) => {
 
    const closeDeleteModal = () => {
       setShowDeleteModal(false); 
+   };
+
+   const closeAddModal = () => {
+      setShowAddModal(false); 
    };
 
 
@@ -84,9 +91,47 @@ const DecksForm = ({ id }) => {
       navigate(`/deck/${deck_id}`);
    };
    
+   const openDeckModal = () => {
+      setShowAddModal(true);
+   };
+
+    const handleCreate = async (formData) => {
+      setInternalErrorCreate("");
+      setInternalSuccessCreate("");
+      const token = localStorage.getItem('token');
+      try {
+         setLoading(true);
+         console.log(formData.deck_name)
+         const result = await PostService.postData("http://localhost:8000/decks/create/",
+            {
+               name: formData.deck_name,
+               description: "описание",
+               user_id: user_id
+            }, 'json', token);
+         if (result.id) {
+            setInternalSuccessCreate("Колода успешно создана!");
+            setTimeout(() => {
+               navigate(`/deck/${result.id}`)
+            }, 1000);
+         }
+      } catch (error) {
+         setInternalErrorCreate(error.data?.error || error.data || "Произошла ошибка при создании колоды");
+      } finally {
+         setLoading(false);
+      }
+   };
 
    return (
       <div style={{width: "calc(100% * 1 / 3)"}}>
+         {loading && <div>Загрузка колод...</div>}
+         
+         {!loading && decksData && decksData.length === 0 && (
+            <div className="alert alert-info">
+            У вас пока нет колод
+            </div>
+         )}
+         
+         {!loading && decksData && decksData.length > 0 && (
          <Form
             className="w-100"
             title="Мои колоды"
@@ -94,10 +139,12 @@ const DecksForm = ({ id }) => {
             formError={internalError}
             >
          </Form>
+         )}
          <Button 
             className="mt-3"
             variant="primary"
             disabled={loading}
+            onClick={openDeckModal}
          >
             <i className="bi bi-plus-circle"></i> Добавить колоду
          </Button>
@@ -107,7 +154,17 @@ const DecksForm = ({ id }) => {
             show={showDeleteModal}
             onClose={closeDeleteModal}
          />
-      
+         {showAddModal &&(
+            <CreateDeckForm 
+               user_id={user_id}
+               show={showAddModal}
+               onClose={closeAddModal}
+               onSubmit={handleCreate}
+               internalErrorCreate={internalErrorCreate}
+               internalSuccessCreate={internalSuccessCreate}
+            />
+         )}
+         
       </div>
      
    );
