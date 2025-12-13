@@ -18,15 +18,13 @@ const ChangeDeckNameForm = ({ show = false, onClose, id }) => {
          const getInfo = async () => {
             setLoading(true);
             try {
-               const result = await GetService.getData(`http://localhost:8000/deck/${id}/`,
+               const result = await GetService.getData(`http://localhost:8000/decks/${id}/cards/`,
                   token
                );
-               
-               if (result.data) {
-                  setData(result.data);
-               } else if (result.deckName) {
-                  setData(result);
-               }
+               console.log(result)
+               if (result && result.deck_name) {
+                  setData(result.deck_name);
+               } 
             } catch (error) {
                setInternalError("Ошибка при получении данных");
             } finally {
@@ -44,7 +42,7 @@ const ChangeDeckNameForm = ({ show = false, onClose, id }) => {
 
    const editFields = [
       {
-         value: data?.deckName || '',
+         value: data || '',
          id: 'deckName',
          type: 'text',
          name: 'deckName',
@@ -65,29 +63,18 @@ const ChangeDeckNameForm = ({ show = false, onClose, id }) => {
       setInternalSuccess("");
       try{
          setLoading(true);
-         const result = await EditService.editData(`http://localhost:8000/deck/${id}/`,
+         const result = await EditService.editData(`http://localhost:8000/decks/${id}/`,
             {
-               deckName: formData.deckName,
+               name: formData.deckName,
             }, 'json', token);
          
-         if (result && result.ok) {
+         if (result) {
             setInternalSuccess("Название успешно изменено!");
             setTimeout(() => {
                onClose();
                window.location.reload();
             }, 2000);
-         } else if (result && result.success) {
-            setInternalSuccess("Название успешно изменено!");
-            setTimeout(() => {
-               onClose();
-               window.location.reload();
-            }, 2000);
-         } else if (result && result.data && result.data.success) {
-            setInternalSuccess("Название успешно изменено!");
-            setTimeout(() => {
-               onClose();
-               window.location.reload();
-            }, 2000);
+        
          } else if (result && result.error) {
             setInternalError(result.error);
          } else if (result && result.data && result.data.error) {

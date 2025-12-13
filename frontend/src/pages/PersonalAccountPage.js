@@ -14,7 +14,7 @@ const PersonalAccountPage = () => {
             <CreateRoomForm id={user_id}/>
          </div>
          <div className="w-75 mx-auto d-flex justify-content-between mt-5">
-         <DecksForm user_id={user_id}/>
+         <DecksForm id={user_id}/>
          </div>
       </PageLayout>
    );

@@ -10,6 +10,7 @@ const DeckStack = ({deck_id}) => {
   const [name, setName] = useState(null);
   const [internalError, setInternalError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [cardsByCategory, setCardsByCategory] = useState({});
 
   const navigate = useNavigate();
   const returnToPersonalAccount = () => {
@@ -35,12 +36,12 @@ const DeckStack = ({deck_id}) => {
     const getInfo = async () => {
       try {
         setLoading(true); 
-        const result = await GetService.getData(`http://localhost:8000/deck/${deck_id}`, 
+        const result = await GetService.getData(`http://localhost:8000/decks/${deck_id}/cards/`, 
           token
         );
-        
-        if (result.name) {
-          setName(result.name);
+        if (result && result.deck_name && result.cards_by_category) {
+          setName(result.deck_name);
+          setCardsByCategory(result.cards_by_category);
         } 
       } catch (error) {
         setInternalError("Ошибка при получении данных колоды");
@@ -54,6 +55,20 @@ const DeckStack = ({deck_id}) => {
     }
   }, [deck_id]);
 
+  const categories = {
+    1: 'catastrophe',     
+    2: 'profession',     
+    3: 'health',         
+    4: 'hobby',           
+    5: 'personality',    
+    6: 'luggage',         
+    7: 'additional',      
+  };
+
+  const getCategoryCards = (categoryId) => {
+    const categoryName = categories[categoryId];
+    return cardsByCategory[categoryName] || [];
+  };
 
   return (
     <div className="w-75 mx-auto">
@@ -62,9 +77,9 @@ const DeckStack = ({deck_id}) => {
             className="me-3"
             onClick={returnToPersonalAccount}
             style={{ 
-                backgroundColor: '#0A9396', 
-                borderRadius: "20px",
-                color: 'white'
+              backgroundColor: '#0A9396', 
+              borderRadius: "20px",
+              color: 'white'
             }}
           >
             <i className="bi bi-arrow-left"></i>
@@ -84,70 +99,60 @@ const DeckStack = ({deck_id}) => {
           </div> 
       )}
 
-      <h3 style={{color: "white"}}>{name}</h3>
       <div className="accordion" deck_id="mainAccordion">
         <DeckCategory
           deck_id={deck_id}
-          category_id={1}
-          title="Биология"
-          title_svg="heart-fill"
-          name="biology"
+          title="Катастрофа"
+          title_svg="exclamation-triangle-fill"
+          name="catastrophe"
+          cardsData={getCategoryCards(1)}
         />
         <DeckCategory
           deck_id={deck_id}
-          category_id={2}
+          title="Профессия"
+          title_svg="briefcase-fill"
+          name="profession"
+          cardsData={getCategoryCards(2)}
+        />
+        <DeckCategory
+          deck_id={deck_id}
           title="Здоровье"
           title_svg="clipboard-plus-fill"
           name="health"
+          cardsData={getCategoryCards(3)}
         />
+        
         <DeckCategory
           deck_id={deck_id}
-          category_id={3}
-          title="Профессии"
-          title_svg="briefcase-fill"
-          name="profession"
-        />
-        <DeckCategory
-          deck_id={deck_id}
-          category_id={4}
           title="Хобби"
           title_svg="palette-fill"
           name="hobby"
+          cardsData={getCategoryCards(4)}
         />
         <DeckCategory
           deck_id={deck_id}
-          category_id={5}
+          title="Характер"
+          title_svg="star-fill"
+          name="personality"
+          cardsData={getCategoryCards(5)}
+        />
+        <DeckCategory
+          deck_id={deck_id}
           title="Багаж"
           title_svg="tools"
           name="luggage"
+          cardsData={getCategoryCards(6)}
         />
         <DeckCategory
           deck_id={deck_id}
-          category_id={6}
-          title="Факты"
+          title="Дополнительный факт"
           title_svg="info-circle-fill"
           name="fact"
+          cardsData={getCategoryCards(7)}
         />
-        <DeckCategory
-          deck_id={deck_id}
-          category_id={7}
-          title="Особые возможности"
-          title_svg="star-fill"
-          name="unicality"
-        />
+       
       </div>
-      {(parseInt(deck_id) !== 1) && (<div className="d-flex flex-row gap-1">
-        <Button
-          className="mt-3"
-          children="Сохранить"
-        />
-        <Button
-          className="mt-3"
-          type="outline-secondary"
-          children="Отменить"
-          onClick={returnToPersonalAccount}
-        />
-      </div>)}
+     
       <ChangeDeckNameForm
         id={deck_id}
         show={showEditDeckNameModal}

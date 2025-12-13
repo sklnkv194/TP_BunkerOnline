@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import CreateDeckForm from "./CreateDeckForm";
 import { PostService } from "../../scripts/post-service";
 
-const DecksForm = ({ user_id }) => {
+const DecksForm = ({ id }) => {
 
    const navigate = useNavigate();
    const [loading, setLoading] = useState(false);
@@ -28,7 +28,7 @@ const DecksForm = ({ user_id }) => {
          const getDecksInfo = async () => {
             setLoading(true);
             try {
-               const result = await GetService.getData(`http://localhost:8000/decks/${user_id}/`, 
+               const result = await GetService.getData(`http://localhost:8000/decks/${id}/`, 
                   token);
                if (result && result.decks) {
                   setDecksData(result.decks);
@@ -43,7 +43,7 @@ const DecksForm = ({ user_id }) => {
             getDecksInfo();
          }
   
-   }, [user_id]);
+   }, [id]);
 
   useEffect(() => {
       const getDecks = () => {
@@ -95,23 +95,21 @@ const DecksForm = ({ user_id }) => {
       setShowAddModal(true);
    };
 
-    const handleCreate = async (formData) => {
+   const handleCreate = async (formData) => {
       setInternalErrorCreate("");
       setInternalSuccessCreate("");
       const token = localStorage.getItem('token');
       try {
          setLoading(true);
-         console.log(formData.deck_name)
          const result = await PostService.postData("http://localhost:8000/decks/create/",
             {
                name: formData.deck_name,
-               description: "описание",
-               user_id: user_id
+               user_id: id
             }, 'json', token);
-         if (result.id) {
+         if (result && result.data.deck.id) {
             setInternalSuccessCreate("Колода успешно создана!");
             setTimeout(() => {
-               navigate(`/deck/${result.id}`)
+               navigate(`/deck/${result.data.deck.id}`)
             }, 1000);
          }
       } catch (error) {
@@ -156,7 +154,7 @@ const DecksForm = ({ user_id }) => {
          />
          {showAddModal &&(
             <CreateDeckForm 
-               user_id={user_id}
+               id={id}
                show={showAddModal}
                onClose={closeAddModal}
                onSubmit={handleCreate}

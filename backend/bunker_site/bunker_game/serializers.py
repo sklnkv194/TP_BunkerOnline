@@ -23,7 +23,7 @@ class DeckCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Deck
-        fields = ('name', 'description', 'user_id')
+        fields = ('name', 'user_id')
     
     def create(self, validated_data):
         user_id = validated_data.pop('user_id', None)

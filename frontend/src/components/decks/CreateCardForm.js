@@ -1,7 +1,17 @@
+import { useState } from "react";
 import Form from "../ui/Form";
+import { PostService } from "../../scripts/post-service";
 
-
-const CreateCardForm = ({ handleCreate, loading, onClose, internalError, internalSuccess  }) => {
+const CreateCardForm = ({ 
+   show, 
+   onClose, 
+   deck_id, 
+   card_type,  
+   onSuccess   
+}) => {
+   const [loading, setLoading] = useState(false);
+   const [internalError, setInternalError] = useState("");
+   const [internalSuccess, setInternalSuccess] = useState("");
 
    const createFields = [
       {
@@ -12,6 +22,15 @@ const CreateCardForm = ({ handleCreate, loading, onClose, internalError, interna
          required: true,
          wrapperClass: 'mb-3',
          placeholder: "Введите название карты"
+      },
+      {
+         id: 'card_description',
+         type: "text",
+         name: 'card_description',
+         label: 'Описание карты',
+         required: true,
+         wrapperClass: 'mb-3',
+         placeholder: "Введите описание карты"
       }
    ];
 
@@ -20,7 +39,51 @@ const CreateCardForm = ({ handleCreate, loading, onClose, internalError, interna
       disabled: loading
    };
 
-   
+   // Функция создания карты прямо в форме
+   const handleCreate = async (formData) => {
+      setInternalError("");
+      setInternalSuccess("");
+      const token = localStorage.getItem('token');
+      
+      try {
+         setLoading(true);
+         console.log("Creating card with:", {
+            title: formData.card_name,
+            description: formData.card_description,
+            card_type: card_type,
+            deck_id: deck_id
+         });
+         
+         const result = await PostService.postData("http://localhost:8000/cards/create/",
+            {
+               title: formData.card_name,
+               description: formData.card_description,
+               card_type: card_type,
+               deck: deck_id
+            }, 'json', token);
+         
+         console.log(result.data)
+         if (result && result.data.card) {
+            setInternalSuccess("Карта успешно создана!");
+            setTimeout(() => {
+               if (onSuccess) onSuccess(); 
+               onClose(); 
+            }, 1000);
+         
+         } else {
+            setInternalError("Произошла ошибка при создании карты");
+         }
+      } catch (error) {
+         console.error("Error:", error);
+         setInternalError(error.data?.error || error.data || "Произошла ошибка при создании карты");
+      } finally {
+         setLoading(false);
+      }
+   };
+
+   if (!show) {
+      return null;
+   }
 
    return (
       <div style={{
@@ -50,7 +113,7 @@ const CreateCardForm = ({ handleCreate, loading, onClose, internalError, interna
             onSubmit={handleCreate}  
             formError={internalError}
             formSuccess={internalSuccess}
-            >
+         >
          </Form>
       </div>
    );
