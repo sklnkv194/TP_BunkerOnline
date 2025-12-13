@@ -38,7 +38,7 @@ urlpatterns = [
     # Колоды
     path('decks/', deck_list, name='deck-list'),
     path('decks/create/', deck_create, name='deck-create'),
-    path('decks/<int:user_id>/', deck_detail, name='deck-detail'),
+    path('decks/<int:id>/', deck_detail, name='deck-detail'),
     path('decks/<int:deck_id>/cards/', deck_cards, name='deck-cards'),
     
     # Карточки

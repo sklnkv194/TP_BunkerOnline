@@ -28,17 +28,17 @@ def deck_list(request):
     description="Возврат информации о конкретной колоде и её картах",
     responses=DeckSerializer
 )
-@api_view(['GET'])
+@api_view(['GET', 'PUT', 'DELETE'])
 # @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
-def deck_detail(request, user_id, deck_id):
+def deck_detail(request, id):
     if (request.method == "GET"):
-        decks = Deck.objects.filter(user_id=user_id)
+        decks = Deck.objects.filter(user_id=id)
         serializer = DeckSerializer(decks, many=True)
         return Response({'decks': serializer.data})
     
     if (request.method == "PUT"):
-        deck = get_object_or_404(Deck, id=deck_id)
+        deck = get_object_or_404(Deck, id=id)
         serializer = DeckCreateSerializer(deck, data=request.data, partial=True)
         if serializer.is_valid():
             deck = serializer.save()
@@ -49,9 +49,9 @@ def deck_detail(request, user_id, deck_id):
         return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
     if (request.method == "DELETE"):
-        deck = get_object_or_404(Deck, id=deck_id)
+        deck = get_object_or_404(Deck, id=id)
         deck.delete()
-        return Response({'message': 'Колода успешно удалена'})
+        return Response({'ok': True, 'message': 'Колода успешно удалена'})
 
 @extend_schema(
     summary="Создание новой колоды",
@@ -72,7 +72,6 @@ def deck_create(request):
     )
     if serializer.is_valid():
         deck = serializer.save()
-        print(DeckSerializer(deck).data)
         return Response({
             'message': 'Колода успешно создана',
             'deck': DeckSerializer(deck).data
@@ -111,7 +110,7 @@ def card_list(request):
     summary="Получение детальной информации о карточке",
     responses=CardSerializer
 )
-@api_view(['GET'])
+@api_view(['GET', 'PUT', 'DELETE'])
 # @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def card_detail(request, card_id):
@@ -155,15 +154,32 @@ def card_create(request):
         }, status=status.HTTP_201_CREATED)
     return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-@extend_schema(
-    summary="Получение всех карточек колоды",
-    description="Возврат всех карточек принадлежащих указанной колоде",
-    responses=DeckSerializer
-)
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def deck_cards(request, deck_id):
     deck = get_object_or_404(Deck, id=deck_id)
-    serializer = DeckSerializer(deck)
-    return Response(serializer.data)
+    
+    cards = deck.cards.all()
+    
+    cards_by_category = {}
+    
+    for card in cards:
+        card_type = card.card_type
+        if card_type not in cards_by_category:
+            cards_by_category[card_type] = []
+        
+        cards_by_category[card_type].append({
+            'id': card.id,
+            'title': card.title,
+            'description': card.description,
+            'card_type': card_type,
+            'card_type_display': card.get_card_type_display(),
+        })
+    
+    response_data = {
+        'deck_id': deck.id,
+        'deck_name': deck.name,
+        'cards_by_category': cards_by_category
+    }
+    
+    return Response(response_data)

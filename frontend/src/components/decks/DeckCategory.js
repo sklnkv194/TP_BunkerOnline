@@ -1,22 +1,19 @@
 import CreateCardForm from "./CreateCardForm";
-import { useState, useEffect } from "react";
+import { useState } from "react"; 
 import Button from "../ui/Button";
-import { PostService } from "../../scripts/post-service";
 import { DeleteService } from "../../scripts/delete-service";
 
 const DeckCategory = ({ 
    deck_id,
-   category_id,   
    title,
    title_svg,
-   name
+   name,
+   cardsData = [],
+   onCardCreated 
 }) => {
-   const [cardsData, setCardsData] = useState([]);
    const [loading, setLoading] = useState(false);
    const [internalError, setInternalError] = useState("");
    const [internalSuccess, setInternalSuccess] = useState("");
-   const [internalErrorCreate, setInternalErrorCreate] = useState("");
-   const [internalSuccessCreate, setInternalSuccessCreate] = useState("");
    const [showModal, setShowModal] = useState(false); 
 
    const button_child = (
@@ -24,66 +21,20 @@ const DeckCategory = ({
          <i className={`bi bi-${title_svg}`}></i> {title}
       </h5>
    );
-   
 
    const openModal = () => {
       setShowModal(true);
    };
 
    const closeModal = () => {
-      setShowModal(false); 
-   };
-   
-   useEffect(() => {
+      setShowModal(false);
       setInternalError("");
       setInternalSuccess("");
-      const token = localStorage.getItem('token');
-      const getCardsInfo = async () => {
-         setLoading(true);
-         try {
-            const result = await PostService.postData(`http://localhost:8000/cards/get_info`, 
-               {
-                  deck_id: deck_id,
-                  category_id: category_id
-               }, "form",
-               token);
-            if (result.data) {
-               setCardsData(result.data);
-            }
-         } catch (error) {
-            setInternalError("Ошибка при получении данных");
-         } finally {
-            setLoading(false);
-         }
-      };
-      if (token) {
-         getCardsInfo();
-      }
-   }, [deck_id, category_id]);
+   };
 
-   const handleCreate = async (formData) => {
-      setInternalErrorCreate("");
-      setInternalSuccessCreate("");
-      const token = localStorage.getItem('token');
-      try {
-         setLoading(true);
-         const result = await PostService.postData("http://localhost:8000/cards/create/",
-            {
-               name: formData.name,
-               category_id: category_id,
-               deck_id: deck_id
-            }, 'json', token);
-         if (result.id) {
-            setInternalSuccessCreate("Карта успешно создана!");
-            setTimeout(() => {
-               closeModal();
-               window.location.reload();
-            }, 1000);
-         }
-      } catch (error) {
-         setInternalErrorCreate(error.data?.error || error.data || "Произошла ошибка при создании карты");
-      } finally {
-         setLoading(false);
+   const handleCardCreated = () => {
+      if (onCardCreated) {
+         onCardCreated();
       }
    };
 
@@ -93,9 +44,9 @@ const DeckCategory = ({
          setInternalError("");
          setInternalSuccess("");
          setLoading(true);
-         const result = await DeleteService.deleteData(`http://localhost:8000/cards/delete/${cardId}`,
+         const result = await DeleteService.deleteData(`http://localhost:8000/cards/${cardId}/`,
             'json', token);
-         if (result.ok) {
+         if (result.message) {
             setInternalSuccess("Карта успешно удалена!");
             setTimeout(() => {
                window.location.reload();
@@ -161,7 +112,7 @@ const DeckCategory = ({
                         <ul className="list-group">
                            {cardsData.map(card => (
                               <li key={card.id} className="list-group-item d-flex justify-content-between align-items-center">
-                                 {card.name}
+                                 {card.title} - {card.description}
                                  {canEdit && (
                                     <button 
                                        className="btn btn-sm btn-outline-danger"
@@ -181,10 +132,9 @@ const DeckCategory = ({
                      <CreateCardForm 
                         show={showModal}
                         onClose={closeModal}
-                        onSubmit={handleCreate}
-                        loading={loading}
-                        internalError={internalErrorCreate}
-                        internalSuccess={internalSuccessCreate}
+                        deck_id={deck_id}
+                        card_type={name} 
+                        onSuccess={handleCardCreated} 
                      />
                   )}
                </div>
