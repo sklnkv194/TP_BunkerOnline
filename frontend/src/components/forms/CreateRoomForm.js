@@ -87,12 +87,16 @@ const CreateRoomForm = ({ id }) => {
          const result = await PostService.postData("http://localhost:8000/rooms/create/",
             {
             deck: parseInt(formData.deck),
-            count: formData.count,
+            max_players: parseInt(formData.players_count),
             user_id: id
          }, 'json', token);
-         if (result.id){
-            const roomId = result.data.room_id;
+         console.log(result)
+         if (result.data.room_id){
+            const roomId = result.data.room_code;
             navigate(`/wait_for_game/${roomId}?is_owner=true`);
+         } else {
+            setInternalError("Произошла ошибка при создании комнаты");
+
          }
       } catch (error) {
          setInternalError(error.data || "Произошла ошибка при создании комнаты");

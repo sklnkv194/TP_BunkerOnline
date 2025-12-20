@@ -35,7 +35,6 @@ export class PostService {
          });
          const result = await response.json();
          
-         // ✅ Возвращаем объект с статусом и данными
          return {
             ok: response.ok,
             status: response.status,

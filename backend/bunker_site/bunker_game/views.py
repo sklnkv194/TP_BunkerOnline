@@ -183,3 +183,202 @@ def deck_cards(request, deck_id):
     }
     
     return Response(response_data)
+
+
+from .serializers import RoomSerializer, RoomCreateSerializer
+from .models import RoomPlayer, Room
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def room_create(request):
+    """
+    Создание новой комнаты
+    """
+    serializer = RoomCreateSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        deck_id = request.data.get('deck')
+        if deck_id:
+            try:
+                deck = Deck.objects.get(id=deck_id)
+            except Deck.DoesNotExist:
+                return Response({'error': 'Колода не найдена'}, status=404)
+        
+        room = serializer.save()
+        
+        return Response({
+            'message': 'Комната успешно создана',
+            'room_id': room.id,
+            'room_code': room.code,
+            'room': RoomSerializer(room).data,
+            'is_owner': True
+        }, status=status.HTTP_201_CREATED)
+    
+    return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+from users.models import UserProfile
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def room_detail(request, room_id):
+    """
+    Получение полной информации о комнате
+    """
+    try:
+        room = Room.objects.get(code=room_id)
+    except Room.DoesNotExist:
+        return Response({'error': 'Комната не найдена'}, status=404)
+    
+    room_players = RoomPlayer.objects.filter(room=room).select_related('player')
+    players_data = []
+    
+    for room_player in room_players:
+        player = room_player.player
+    
+        nickname = player.username
+        
+        try:
+            user_profile = UserProfile.objects.get(user=player)
+            if user_profile.nickname: 
+                nickname = user_profile.nickname
+        except UserProfile.DoesNotExist:
+            pass
+        
+        players_data.append({
+            'id': room_player.player.id,
+            'username': nickname,
+            'is_owner': room_player.player.id == room.creator.id,
+            'joined_at': room_player.joined_at,
+        })
+    
+    return Response({
+        'room_id': room.id,
+        'room_code': room.code,
+        'creator_id': room.creator.id,
+        'creator_username': room.creator.username,
+        'deck_id': room.deck.id if room.deck else None,
+        'deck_name': room.deck.name if room.deck else 'Не выбрана',
+        'max_players': room.max_players,
+        'players_count': len(players_data),
+        'players': players_data,
+        'status': room.status,
+        'created_at': room.created_at,
+    })
+    
+    
+from django.contrib.auth.models import User 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def join_room(request):
+    """
+    Присоединение к комнате по коду 
+    """
+    code = request.data.get('code', '').strip().upper()
+    user_id = request.data.get('user_id')
+    
+    if not code:
+        return Response({'error': 'Введите код комнаты'}, status=400)
+    
+    if not user_id:
+        return Response({'error': 'Ошибка аутентификации'}, status=400)
+    
+    try:
+        room = Room.objects.get(code=code)
+    except Room.DoesNotExist:
+        return Response({'error': 'Комната с таким кодом не найдена'}, status=404)
+    
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'Пользователь не найден'}, status=404)
+    
+    if room.status != 'waiting':
+        return Response({'error': 'Игра уже началась'}, status=400)
+    
+    if room.get_players_count() >= room.max_players:
+        return Response({'error': 'В комнате нет свободных мест'}, status=400)
+    
+    if RoomPlayer.objects.filter(room=room, player=user).exists():
+        return Response({'error': 'Вы уже в этой комнате'}, status=400)
+    
+    RoomPlayer.objects.create(room=room, player=user)
+    
+    return Response({
+        'message': 'Вы успешно присоединились к комнате',
+        'room_id': room.id,
+        'room_code': room.code,
+        'is_owner': room.creator.id == user.id,
+        'players_count': room.get_players_count()
+    })
+    
+    
+from django.utils import timezone
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def start_game(request, room_id):
+    """Начало игры в комнате (для создателя)"""
+    room = get_object_or_404(Room, code=room_id)
+    
+    if room.creator != request.user:
+        return Response({'error': 'Только создатель может начать игру'}, status=403)
+    
+    if room.status != 'waiting':
+        return Response({'error': 'Игра уже начата или завершена'}, status=400)
+    
+    if room.get_players_count() < 3: 
+        return Response({'error': 'Недостаточно игроков для начала игры'}, status=400)
+    
+    room.status = 'active'
+    room.started_at = timezone.now()
+    room.save()
+    
+    
+    return Response({
+        'message': 'Игра начата',
+        'room': RoomSerializer(room).data
+    })
+    
+    
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def room_player_manage(request, room_id, player_id):
+    """
+    Управление игроком в комнате (выход или удаление)
+    """
+    try:
+        room = Room.objects.get(code=room_id)
+        player = User.objects.get(id=player_id)
+    except (Room.DoesNotExist, User.DoesNotExist):
+        return Response({'error': 'Комната или игрок не найден'}, status=404)
+    
+    # Удаляем игрока из комнаты
+    deleted_count, _ = RoomPlayer.objects.filter(room=room, player=player).delete()
+    
+    if deleted_count > 0:
+        return Response({
+            'message': f'Игрок {player.username} удален из комнаты',
+            'player_id': player_id
+        })
+    else:
+        return Response({'error': 'Игрок не найден в комнате'}, status=404) 
+    
+    
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def delete_room(request, room_id):
+    """
+    Удаление комнаты (только для создателя)
+    """
+    try:
+        room = Room.objects.get(code=room_id)
+    except Room.DoesNotExist:
+        return Response({'error': 'Комната не найдена'}, status=404)
+ 
+    RoomPlayer.objects.filter(room=room).delete()
+    
+    room.delete()
+    
+    return Response({
+        'message': 'Комната успешно удалена',
+        'room_id': room_id
+    })    
