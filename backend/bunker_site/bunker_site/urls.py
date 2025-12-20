@@ -46,6 +46,13 @@ urlpatterns = [
     path('cards/create/', card_create, name='card-create'),
     path('cards/<int:card_id>/', card_detail, name='card-detail'),
 
+    path('rooms/create/', room_create, name='room-create'),
+    path('rooms/join_room/', join_room, name='room-join'),
+    path('rooms/<str:room_id>/delete/', delete_room, name='delete-room'),
+    path('rooms/<str:room_id>/start/', start_game, name='start-game'),
+    path('rooms/<str:room_id>/players/<int:player_id>/', room_player_manage, name='room-player-manage'),
+    path('rooms/<str:room_id>/', room_detail, name='room-detail'),
+    
     # Swagger/OpenAPI
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

@@ -13,6 +13,7 @@ const ConnectToRoomForm = ({id=""}) => {
 
    const connectToRoomFields = [
       {
+         id:'room_code',
          type: 'text',
          name: 'room_code',
          label: 'Код комнаты',
@@ -30,13 +31,14 @@ const ConnectToRoomForm = ({id=""}) => {
 
    const handleConnectToRoom = async (formData) => {
       try{
+         const user_id = localStorage.getItem('id');
          setLoading(true);
-         const result = await PostService.postData('http://localhost:8000/connect_to_room/', {
-               code: formData.code
-            }, 'form');
+         const result = await PostService.postData('http://localhost:8000/rooms/join_room/', {
+               code: formData.room_code,
+               user_id: parseInt(user_id) 
+            }, 'json');
          if (result && result.ok){
-            const roomId = result.data.room_id;
-            const isOwner = result.data.is_owner || false;
+            const roomId = result.data.room_code;
             navigate(`/wait_for_game/${roomId}?is_owner=false`);
          } else {
             setInternalError(result.data.error);

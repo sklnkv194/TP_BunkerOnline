@@ -76,7 +76,7 @@ function App() {
           } 
         />
         <Route 
-          path="/wait_for_game/:game_id" 
+          path="/wait_for_game/:gameId" 
           element={<WaitGamePage />} 
         />
       </Routes>
