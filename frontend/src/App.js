@@ -7,6 +7,7 @@ import MainPage from './pages/MainPage';
 import DeckPage from './pages/DeckPage';
 import PersonalAccountPage from './pages/PersonalAccountPage';
 import WaitGamePage from './pages/WaitGamePage';
+import GamePage from './pages/GamePage';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -78,6 +79,10 @@ function App() {
         <Route 
           path="/wait_for_game/:gameId" 
           element={<WaitGamePage />} 
+        />
+        <Route 
+          path="/game" 
+          element={<GamePage />} 
         />
       </Routes>
     </Router>
