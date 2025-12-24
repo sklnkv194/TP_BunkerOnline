@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import Button from "../ui/Button";
+import Button from "../../ui/Button";
 import { useNavigate } from "react-router-dom";
-import DeleteModal from "../forms/DeleteModal";
-import { DeleteService } from "../../scripts/delete-service";
-import { GetService } from "../../scripts/get-service";
+import DeleteModal from "../../forms/DeleteModal";
+import { DeleteService } from "../../../scripts/delete-service";
+import { GetService } from "../../../scripts/get-service";
 import { useParams, useSearchParams } from "react-router-dom";
 
 const GameWaitingForm = () => {
