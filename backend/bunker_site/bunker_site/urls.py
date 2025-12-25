@@ -53,6 +53,14 @@ urlpatterns = [
     path('rooms/<str:room_id>/players/<int:player_id>/', room_player_manage, name='room-player-manage'),
     path('rooms/<str:room_id>/', room_detail, name='room-detail'),
     
+    path('rooms/<str:room_code>/start/', start_game, name='start-game'),
+    path('game_info_init/<str:room_code>/', game_info_init, name='game-info-init'),
+    path('game_info/<str:room_code>/', game_info, name='game-info'),
+    path('make_move/<str:room_code>/', make_move, name='make-move'),
+    path('vote/<str:room_code>/', vote, name='vote'),
+    path('time_discussion_end/<str:room_code>/', time_discussion_end, name='time-discussion-end'),
+    path('time_voting_end/<str:room_code>/', time_voting_end, name='time-voting-end'),
+    
     # Swagger/OpenAPI
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
