@@ -194,4 +194,20 @@ class PlayerCard(models.Model):
         verbose_name_plural = "Карты игроков"
     
     def __str__(self):
-        return f"{self.player.username} - {self.card.title}"        
+        return f"{self.player.username} - {self.card.title}"   
+
+class Vote(models.Model):
+    """Голос за исключение игрока"""
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='votes')
+    voter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='votes_given')
+    target_player = models.ForeignKey(User, on_delete=models.CASCADE, related_name='votes_received')
+    round_number = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['room', 'voter', 'round_number']
+        verbose_name = "Голос"
+        verbose_name_plural = "Голоса"
+    
+    def __str__(self):
+        return f"{self.voter.username} → {self.target_player.username} (раунд {self.round_number})"     
