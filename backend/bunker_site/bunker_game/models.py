@@ -33,6 +33,7 @@ class Deck(models.Model):
 class Card(models.Model):
     CARD_TYPES = [
         ('catastrophe', 'Катастрофа'),
+        ('bunker', 'Бункер'),
         ('profession', 'Профессия'),
         ('health', 'Здоровье'),
         ('hobby', 'Хобби'),
@@ -158,3 +159,39 @@ class RoomPlayer(models.Model):
         unique_together = ['room', 'player']
         verbose_name = "Игрок в комнате"
         verbose_name_plural = "Игроки в комнатах"
+        
+        
+class GameState(models.Model):
+    """Состояние игры в комнате"""
+    room = models.OneToOneField(Room, on_delete=models.CASCADE, related_name='game_state')
+    catastrophe_card = models.ForeignKey(Card, on_delete=models.SET_NULL, null=True, related_name='catastrophe_games')
+    bunker_card = models.ForeignKey(Card, on_delete=models.SET_NULL, null=True, related_name='bunker_games')
+    current_round = models.PositiveIntegerField(default=1)
+    current_phase = models.CharField(max_length=20, default='game')
+    current_player_index = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Игра в комнате {self.room.code}"
+    
+    class Meta:
+        verbose_name = "Состояние игры"
+        verbose_name_plural = "Состояния игр"
+
+class PlayerCard(models.Model):
+    """Карта на руках у игрока"""
+    player = models.ForeignKey(User, on_delete=models.CASCADE, related_name='player_cards')
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='player_cards')
+    card = models.ForeignKey(Card, on_delete=models.CASCADE)
+    is_visible = models.BooleanField(default=False)  # открыта ли карта
+    is_used = models.BooleanField(default=False)     # использована ли карта
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['player', 'room', 'card']
+        verbose_name = "Карта игрока"
+        verbose_name_plural = "Карты игроков"
+    
+    def __str__(self):
+        return f"{self.player.username} - {self.card.title}"        

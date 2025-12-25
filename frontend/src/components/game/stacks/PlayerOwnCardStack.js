@@ -1,7 +1,9 @@
 import PlayerCard from "../cards/PlayerCard";
 
 const PlayerOwnCardStack = ({ 
-   cards
+   cards,
+   onCardClick,
+   phase
 }) => {
    return (
       <div className={`flex-row p-1 mt-2`}>         
@@ -14,6 +16,12 @@ const PlayerOwnCardStack = ({
                   category_id={card.category_id}
                   name={card.name}
                   is_choose={card.is_choose}
+                  onClick={() => {
+                     if (phase === "game" && !card.is_choose) {
+                        onCardClick(card.id); 
+                     }
+                  }}
+                  isClickable={phase === "game" && !card.is_choose}
                /> 
             ))}     
          </div>

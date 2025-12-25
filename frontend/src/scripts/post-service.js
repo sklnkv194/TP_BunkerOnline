@@ -7,7 +7,7 @@ export class PostService {
          };
 
          if (authToken) {
-            headers['Authorization'] = `Token ${authToken}`;
+            headers['Authorization'] = `Bearer ${authToken}`;
          }
 
          if (contentType === 'form') {

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import DeleteModal from "../../forms/DeleteModal";
 import { DeleteService } from "../../../scripts/delete-service";
 import { GetService } from "../../../scripts/get-service";
+import { PostService } from "../../../scripts/post-service";
 import { useParams, useSearchParams } from "react-router-dom";
 
 const GameWaitingForm = () => {
@@ -26,6 +27,7 @@ const GameWaitingForm = () => {
    const fetchRoomData = async () => {
       try {
          const token = localStorage.getItem('token');
+         const user_id = localStorage.getItem('id');
          
          const result = await GetService.getData(`http://localhost:8000/rooms/${gameId}/`, token);
          
@@ -35,6 +37,22 @@ const GameWaitingForm = () => {
             
             setConnectedPlayersCount(result.players_count);
             setAllPlayersCount(result.max_players );
+
+            if (parseInt(user_id) && result.players) {
+               const isPlayerInRoom = result.players.some(player => player.id === parseInt(user_id));
+               
+               if (!isPlayerInRoom) {
+                  navigate('/');
+                  return;
+               }
+            }
+
+            if (result.status === 'active') {
+               //игра началась - редирект на страницу игры
+               navigate(`/game/${gameId}`);
+               return;
+            }
+
             setError(""); 
          } else {
             setError(result.data?.error || "Ошибка загрузки данных комнаты");
@@ -109,8 +127,30 @@ const GameWaitingForm = () => {
       });
    };
 
-   const handleStartGame = () => {
-      navigate('/game');
+   const handleStartGame = async () => {
+      setLoading(true);
+      setError("");
+      
+      try {
+         const token = localStorage.getItem('token');
+         const userId = localStorage.getItem('id');
+         
+         const result = await PostService.postData(
+            `http://localhost:8000/rooms/${gameId}/start/`,
+            { user_id: parseInt(userId) },
+            'json',
+            token
+         );
+         if (result?.ok || result?.success) {
+            navigate(`/game/${gameId}`);
+         } else {
+            setError(result?.error || "Ошибка начала игры");
+         }
+      } catch (error) {
+         setError("Ошибка соединения");
+      } finally {
+         setLoading(false);
+      }
    };
 
    const getRoomInfoFields = () => {
@@ -154,8 +194,8 @@ const GameWaitingForm = () => {
             onClose={() => setDeleteModal({ show: false, playerId: null })}
             id={deleteModal.playerId}
             url={deleteModal.isPlayer 
-               ? `http://localhost:8000/rooms/${gameId}/players/${deleteModal.playerId}/`  
-               : `http://localhost:8000/rooms/${gameId}/delete/`}      
+               ? `http://localhost:8000/rooms/${gameId}/players`  
+               : `http://localhost:8000/rooms/${gameId}/delete`}      
          />
                   
          <div className="room-header mb-4">
@@ -253,7 +293,7 @@ const GameWaitingForm = () => {
                         <Button
                      
                            onClick={handleStartGame}
-                           disabled={loading || connected_players_count < 2}
+                           disabled={loading || connected_players_count < 3}
                         >
                            {loading ? (
                               <>

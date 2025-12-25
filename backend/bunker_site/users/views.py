@@ -83,7 +83,6 @@ def login_view(request):
 @csrf_exempt
 @api_view(['POST'])
 def forget_password_view(request):
-    print("📨 Получен запрос на восстановление пароля")
     
     if request.method == 'POST':
         email = request.data.get('email')

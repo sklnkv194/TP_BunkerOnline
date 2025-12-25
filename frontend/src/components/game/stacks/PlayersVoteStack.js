@@ -2,7 +2,13 @@ import { useState } from "react";
 import PlayerCardVoteStack from "./PlayerCardVoteStack";
 import { PostService } from "../../../scripts/post-service";
 
-const PlayersVoteStack = ({ players, phase }) => {
+const PlayersVoteStack = (
+   { 
+      players, 
+      phase, 
+      onVote
+   }
+) => {
 const [userVote, setUserVote] = useState(null);
 
 const handleVote = async (voteData) => {
@@ -42,7 +48,12 @@ return (
                   canVote={canVoteForThisPlayer}
                   isVotedFor={userVote === player.id}
                   hasUserVoted={hasUserVoted}
-                  onVote={hasUserVoted ? null : handleVote}
+                  onVote={async (voteData) => {
+                     if (onVote) {
+                     await onVote(voteData.playerId);
+                     setUserVote(voteData.playerId); 
+                     }
+                  }}
                />
             </div>
          );

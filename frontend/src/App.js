@@ -81,7 +81,7 @@ function App() {
           element={<WaitGamePage />} 
         />
         <Route 
-          path="/game" 
+          path="/game/:code" 
           element={<GamePage />} 
         />
       </Routes>

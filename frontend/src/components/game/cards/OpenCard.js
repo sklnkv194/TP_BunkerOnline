@@ -44,29 +44,26 @@ const OpenCard = (
          category = "Доп факт";
          bi = "info-circle-fill";  
          break;
-      case 0:
-         if (is_choose){
-            color = "#000000";
-            category = "Ход игрока";
-            name="Думает..."
-            bi = "stopwatch-fill";  
-            break;
-         }
-         if (is_leave){
-            color = "#7D7C7C";
-            category = "Не активен";
-            name="Выбыл из бункера";
-            bi="x-square-fill";
-            break;
-         }
-         if (is_wait){
-            color = "#000000";
-            category = "Карта не раскрыта";
-            name="Ожидает ход";
-            bi="question-square-fill";
-            break;
-         }
    }
+   if (is_choose){
+      color = "#000000";
+      category = "Ход игрока";
+      name="Думает..."
+      bi = "stopwatch-fill";  
+   }
+   if (is_leave){
+      color = "#7D7C7C";
+      category = "Не активен";
+      name="Выбыл из бункера";
+      bi="x-square-fill";
+   }
+   if (is_wait){
+      color = "#000000";
+      category = "Карта не раскрыта";
+      name="Ожидает ход";
+      bi="question-square-fill";
+   }
+
    return (
       <div key={id} id={`open-card-${id}`} className="cont flex-row p-3 mt-4" style={{ boxShadow: `0 0 5px 5px ${color}`, width: 'calc(25% - 0.75rem)'}}>
          <div className="col-md-7">
