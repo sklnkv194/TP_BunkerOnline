@@ -6,16 +6,20 @@ from django.shortcuts import get_object_or_404
 from .models import Deck, Card
 from .serializers import (
     DeckSerializer, CardSerializer, 
-    DeckCreateSerializer, CardCreateSerializer
+    DeckCreateSerializer, CardCreateSerializer,
+    RoomSerializer, RoomCreateSerializer
 )
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 
-@extend_schema(
-    summary="Получение списка всех колод",
-    description="Возврат всех активных колод",
-    responses=DeckSerializer(many=True)
-)
+from users.models import UserProfile
+from django.contrib.auth.models import User 
+
+import random
+from django.utils import timezone
+from .models import GameState, PlayerCard, Room, RoomPlayer, Card, Deck, Vote
+from collections import Counter
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def deck_list(request):
@@ -23,17 +27,11 @@ def deck_list(request):
     serializer = DeckSerializer(decks, many=True)
     return Response({'decks': serializer.data})
 
-@extend_schema(
-    summary="Получение детальной информации о колоде",
-    description="Возврат информации о конкретной колоде и её картах",
-    responses=DeckSerializer
-)
 @api_view(['GET', 'PUT', 'DELETE'])
-# @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def deck_detail(request, id):
     if (request.method == "GET"):
-        decks = Deck.objects.filter(user_id=id)
+        decks = Deck.objects.filter(user_id__in=[id, 22])
         serializer = DeckSerializer(decks, many=True)
         return Response({'decks': serializer.data})
     
@@ -53,14 +51,7 @@ def deck_detail(request, id):
         deck.delete()
         return Response({'ok': True, 'message': 'Колода успешно удалена'})
 
-@extend_schema(
-    summary="Создание новой колоды",
-    description="Создание колоды с переданными параметрами",
-    request=DeckCreateSerializer,
-    responses=DeckSerializer
-)
 @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def deck_create(request):
     """
@@ -79,21 +70,7 @@ def deck_create(request):
     
     return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-@extend_schema(
-    summary="Получение списка карточек",
-    description="Возврат карточек с возможностью фильтрации по колоде",
-    parameters=[
-        OpenApiParameter(
-            name='deck_id',
-            type=OpenApiTypes.INT,
-            location=OpenApiParameter.QUERY,
-            description='ID колоды для фильтрации'
-        )
-    ],
-    responses=CardSerializer(many=True)
-)
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def card_list(request):
     deck_id = request.GET.get('deck_id')
@@ -106,12 +83,7 @@ def card_list(request):
     serializer = CardSerializer(cards, many=True)
     return Response({'cards': serializer.data})
 
-@extend_schema(
-    summary="Получение детальной информации о карточке",
-    responses=CardSerializer
-)
 @api_view(['GET', 'PUT', 'DELETE'])
-# @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def card_detail(request, card_id):
     if (request.method == "GET"):
@@ -135,14 +107,7 @@ def card_detail(request, card_id):
         card.delete()
         return Response({'message': 'Карточка успешно удалена'})
 
-@extend_schema(
-    summary="Создание новой карточки",
-    description="Создание карточки в указанной колоде",
-    request=CardCreateSerializer,
-    responses=CardSerializer
-)
 @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
 @permission_classes([AllowAny])
 def card_create(request):
     serializer = CardCreateSerializer(data=request.data)
@@ -184,10 +149,6 @@ def deck_cards(request, deck_id):
     
     return Response(response_data)
 
-
-from .serializers import RoomSerializer, RoomCreateSerializer
-from .models import RoomPlayer, Room
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def room_create(request):
@@ -215,8 +176,6 @@ def room_create(request):
         }, status=status.HTTP_201_CREATED)
     
     return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-from users.models import UserProfile
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -265,8 +224,6 @@ def room_detail(request, room_id):
         'created_at': room.created_at,
     })
     
-    
-from django.contrib.auth.models import User 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def join_room(request):
@@ -418,18 +375,6 @@ def delete_room(request, room_id):
         'room_id': room_id
     })    
     
-    
-
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.models import User
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-import random
-from .models import GameState, PlayerCard, Room, RoomPlayer, Card, Deck
-from django.utils import timezone
-
-
 def initialize_game(room):
     """Инициализация игры: раздача карт"""
     try:
@@ -537,6 +482,7 @@ def initialize_game(room):
         return False
          
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def game_info_init(request, room_code):
     """
     Первоначальная информация об игре (катастрофа, бункер)
@@ -544,19 +490,26 @@ def game_info_init(request, room_code):
     try:
         room = get_object_or_404(Room, code=room_code)
         
-        # Проверяем, что пользователь в комнате
-        user_id = request.user.id if request.user.is_authenticated else None
-        user = get_object_or_404(User, id=user_id) if user_id else None
+        # Получаем user_id из query параметров
+        user_id = request.GET.get('user_id')
+        if not user_id:
+            return Response({'error': 'Не указан user_id'}, status=400)
         
-        if not room.current_players.filter(id=user_id).exists():
+        try:
+            user = User.objects.get(id=int(user_id))
+        except (ValueError, User.DoesNotExist):
+            return Response({'error': 'Пользователь не найден'}, status=404)
+        
+        # Проверяем, что пользователь в комнате
+        if not room.current_players.filter(id=user.id).exists():
             return Response({'error': 'Вы не в этой комнате'}, status=403)
         
         # Получаем состояние игры
         game_state = get_object_or_404(GameState, room=room)
         
         data = {
-            'catastrophe': game_state.catastrophe_card.description if game_state.catastrophe_card else 'Катастрофа не выбрана',
-            'bunker': game_state.bunker_card.description if game_state.bunker_card else 'Бункер не выбран',
+            'catastrophe': game_state.catastrophe_card.description if game_state.catastrophe_card else '',
+            'bunker': game_state.bunker_card.description if game_state.bunker_card else '',
             'room_code': room.code,
             'status': room.status
         }
@@ -575,81 +528,42 @@ def game_info(request, room_code):
     Текущее состояние игры (обновляется каждую секунду)
     """
     try:
-        print(f"=== GAME INFO REQUEST ===")
-        print(f"Room code: {room_code}")
-        print(f"Query params: {dict(request.GET)}")
-        
         room = get_object_or_404(Room, code=room_code)
-        
-        # Получаем user_id из query параметров
         user_id = request.GET.get('user_id')
+        
         if not user_id:
-            print("ERROR: user_id not provided in query params")
             return Response({'error': 'Не указан user_id'}, status=400)
         
-        print(f"User ID from query: {user_id}")
-        
         try:
-            user_id_int = int(user_id)
-            current_player = User.objects.get(id=user_id_int)
-            print(f"User found: {current_player.username} (ID: {current_player.id})")
+            current_user = User.objects.get(id=int(user_id))
         except (ValueError, User.DoesNotExist):
-            print(f"ERROR: User with ID {user_id} not found")
             return Response({'error': 'Пользователь не найден'}, status=404)
         
         # Проверяем, что пользователь в комнате
-        if not room.current_players.filter(id=user_id_int).exists():
-            print(f"ERROR: User {user_id_int} is not in room {room_code}")
+        if not room.current_players.filter(id=current_user.id).exists():
             return Response({'error': 'Вы не в этой комнате'}, status=403)
         
         # Проверяем статус комнаты
         if room.status != 'active':
-            print(f"Room status is {room.status}, not 'active'")
-            return Response({'error': 'Игра еще не начата'}, status=400)
+            return Response({
+                'success': True,
+                'phase': 'waiting',
+                'message': 'Ожидайте начала игры'
+            })
         
-        # Пытаемся получить GameState
+        # Получаем состояние игры
         try:
             game_state = GameState.objects.get(room=room)
-            print(f"GameState found: id={game_state.id}")
         except GameState.DoesNotExist:
-            print(f"ERROR: GameState not found for room {room_code}")
             return Response({
-                'error': 'Игра не инициализирована',
-                'room_status': room.status,
+                'success': True,
                 'phase': 'waiting',
-                'message': 'Ожидайте инициализации игры'
-            }, status=200)
+                'message': 'Игра инициализируется'
+            })
         
-        # Функция для получения nickname
-        def get_nickname(user):
-            try:
-                profile = UserProfile.objects.get(user=user)
-                return profile.nickname
-            except UserProfile.DoesNotExist:
-                return user.username
-        
-        # Получаем nickname текущего игрока
-        current_player_nickname = get_nickname(current_player)
-        
-        # Получаем карты текущего игрока
-        player_cards = []
-        if current_player:
-            player_cards_objs = PlayerCard.objects.filter(player=current_player, room=room)
-            player_cards = [{
-                'id': pc.id,
-                'nickname': current_player_nickname,
-                'category_id': get_category_id(pc.card.card_type),
-                'name': pc.card.title,
-                'is_choose': pc.is_visible,
-                'is_leave': False,
-                'is_wait': not pc.is_visible
-            } for pc in player_cards_objs]
-            print(f"Player cards count: {len(player_cards)}")
-        
-        # ВАЖНО: Получаем открытые карты в текущем раунде для ВСЕХ игроков
-        open_cards = []
-        all_players = room.current_players.all()
-        players_list = list(all_players)
+        # Получаем всех игроков в комнате
+        room_players = RoomPlayer.objects.filter(room=room)
+        players_list = [rp.player for rp in room_players]
         
         # Определяем текущего игрока (чей ход)
         current_player_index = game_state.current_player_index
@@ -657,87 +571,55 @@ def game_info(request, room_code):
         if 0 <= current_player_index < len(players_list):
             current_player_turn = players_list[current_player_index]
         
-        print(f"Total players: {len(players_list)}")
-        print(f"Current player index: {current_player_index}")
-        print(f"Current player turn: {current_player_turn}")
-        
-        for i, player in enumerate(players_list):
+        # 1. OpenCards - карточки, открытые в этом раунде
+        open_cards = []
+        for player in players_list:
             player_nickname = get_nickname(player)
-            
-            # Проверяем, открыл ли игрок карту в текущем раунде
-            # Для этого ищем открытые карты игрока (is_visible=True)
-            opened_card = PlayerCard.objects.filter(
-                player=player, 
-                room=room, 
-                is_visible=True
-            ).first()
-            
-            # Определяем статусы
             is_current_turn = (player == current_player_turn)
-            has_opened_card = (opened_card is not None)
             
-            # Создаем объект карты для каждого игрока
-            if opened_card:
-                # Если игрок уже открыл карту в этом раунде
+            # Ищем ЛЮБУЮ карту игрока (для теста)
+            player_card = PlayerCard.objects.filter(player=player, room=room).first()
+            
+            if player_card:
+                # Есть карты у игрока
                 card_data = {
-                    'id': opened_card.id,
+                    'id': player_card.id,
                     'nickname': player_nickname,
-                    'category_id': get_category_id(opened_card.card.card_type),
-                    'name': opened_card.card.title,
-                    'is_choose': False,  # уже выбрал
-                    'is_leave': False,   # не выбыл
-                    'is_wait': False     # не ждет
+                    'category_id': get_category_id(player_card.card.card_type),
+                    'name': player_card.card.title if player_card.is_visible else '',
+                    'is_choose': is_current_turn and not player_card.is_visible,
+                    'is_leave': False,
+                    'is_wait': not is_current_turn and not player_card.is_visible
                 }
             else:
-                # Если игрок еще не открыл карту
-                # Находим любую его закрытую карту для отображения
-                closed_card = PlayerCard.objects.filter(
-                    player=player, 
-                    room=room, 
-                    is_visible=False
-                ).first()
-                
-                if closed_card and is_current_turn:
-                    # Если сейчас его ход - он выбирает карту
-                    card_data = {
-                        'id': closed_card.id if closed_card else 0,
-                        'nickname': player_nickname,
-                        'category_id': get_category_id(closed_card.card.card_type) if closed_card else 0,
-                        'name': "",  # пустое название, так как карта еще не открыта
-                        'is_choose': True,   # выбирает карту
-                        'is_leave': False,   # не выбыл
-                        'is_wait': False     # не ждет (сейчас его ход)
-                    }
-                elif closed_card:
-                    # Если не его ход - он ждет
-                    card_data = {
-                        'id': closed_card.id if closed_card else 0,
-                        'nickname': player_nickname,
-                        'category_id': get_category_id(closed_card.card.card_type) if closed_card else 0,
-                        'name': "",  # пустое название
-                        'is_choose': False,  # не выбирает
-                        'is_leave': False,   # не выбыл
-                        'is_wait': True      # ждет своего хода
-                    }
-                else:
-                    # Если нет карт (запасной вариант)
-                    card_data = {
-                        'id': i + 1000,  # временный ID
-                        'nickname': player_nickname,
-                        'category_id': 0,
-                        'name': "",
-                        'is_choose': False,
-                        'is_leave': False,
-                        'is_wait': True
-                    }
+                # Нет карт у игрока
+                card_data = {
+                    'id': player.id * 1000,
+                    'nickname': player_nickname,
+                    'category_id': 0,
+                    'name': '',
+                    'is_choose': is_current_turn,
+                    'is_leave': False,
+                    'is_wait': not is_current_turn
+                }
             
             open_cards.append(card_data)
         
-        print(f"Open cards created: {len(open_cards)}")
+        # 2. PlayerCards - личные карты текущего пользователя
+        player_cards = []
+        if game_state.current_phase == 'game':
+            user_cards = PlayerCard.objects.filter(player=current_user, room=room)
+            player_cards = [{
+                'id': pc.id,
+                'nickname': get_nickname(current_user),
+                'category_id': get_category_id(pc.card.card_type),
+                'name': pc.card.title if pc.is_visible else '',
+                'is_choose': pc.is_visible
+            } for pc in user_cards]
         
-        # Получаем всех игроков для голосования (оставляем как есть)
+        # 3. PlayersData - информация о картах всех игроков
         players_data = []
-        for player in all_players:
+        for player in players_list:
             player_cards_objs = PlayerCard.objects.filter(player=player, room=room)
             cards = [{
                 'id': pc.id,
@@ -746,10 +628,7 @@ def game_info(request, room_code):
             } for pc in player_cards_objs]
             
             player_nickname = get_nickname(player)
-            
-            can_vote = True
-            if player.id == user_id_int:
-                can_vote = False
+            can_vote = (player.id != current_user.id)
             
             players_data.append({
                 'playerId': player.id,
@@ -759,18 +638,11 @@ def game_info(request, room_code):
                 'hasUserVoted': False
             })
         
-        # Определяем текущую фазу для каждого раунда
+        # 4. Rounds
         rounds_data = []
         for i in range(1, 5):
-            is_current = game_state.current_round == i
+            is_current = (game_state.current_round == i)
             current_phase = game_state.current_phase if is_current else ''
-            
-            if i == 1 and game_state.current_phase not in ['game', 'discussion']:
-                current_phase = ''
-            elif i in [2, 3] and game_state.current_phase not in ['game', 'discussion', 'voting']:
-                current_phase = ''
-            elif i == 4 and game_state.current_phase != 'final':
-                current_phase = ''
             
             rounds_data.append({
                 'id': i,
@@ -779,20 +651,17 @@ def game_info(request, room_code):
                 'current_phase': current_phase
             })
         
-        # Описание угрозы
-        danger = get_danger_description(game_state.current_round)
+        # 5. Danger
+        danger = ''
+        if game_state.current_phase in ['game', 'discussion']:
+            danger = get_danger_description(game_state.current_round)
         
-        # Определяем, ход ли текущего игрока
+        # 6. Ход ли текущего игрока
         is_your_turn = False
         if current_player_turn:
-            is_your_turn = current_player_turn.id == user_id_int
+            is_your_turn = (current_player_turn.id == current_user.id)
         
-        print(f"Phase: {game_state.current_phase}")
-        print(f"Round: {game_state.current_round}")
-        print(f"Is your turn: {is_your_turn}")
-        print(f"Danger: {danger}")
-        
-        data = {
+        return Response({
             'success': True,
             'phase': game_state.current_phase,
             'danger': danger,
@@ -801,84 +670,163 @@ def game_info(request, room_code):
             'playerCards': player_cards,
             'playersData': players_data,
             'current_player_id': current_player_turn.id if current_player_turn else None,
-            'is_your_turn': is_your_turn
-        }
-        
-        print(f"Returning data with keys: {list(data.keys())}")
-        return Response(data)
+            'is_your_turn': is_your_turn,
+            'room_status': room.status
+        })
         
     except Exception as e:
         print(f"Error in game_info: {str(e)}")
         import traceback
         traceback.print_exc()
         return Response({'error': str(e)}, status=500)
-       
+    
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def make_move(request, room_code):
-    """Игрок делает ход (открывает карту)"""
+    """
+    Игрок делает ход (открывает карту)
+    Фаза 1 по ТЗ
+    """
     try:
+        print(f"\n=== MAKE_MOVE REQUEST ===")
+        print(f"Room code: {room_code}")
+        print(f"Request data: {request.data}")
+        
         room = get_object_or_404(Room, code=room_code)
         game_state = get_object_or_404(GameState, room=room)
         
         player_id = request.data.get('player_id')
         card_id = request.data.get('card_id')
         
-        player = get_object_or_404(User, id=player_id)
-        player_card = get_object_or_404(PlayerCard, id=card_id, player=player, room=room)
+        print(f"Player ID from request: {player_id}")
+        print(f"Card ID from request: {card_id}")
+        
+        if not player_id:
+            print("✗ No player_id provided")
+            return Response({'error': 'Не указан player_id'}, status=400)
+        
+        if not card_id:
+            print("✗ No card_id provided")
+            return Response({'error': 'Не указан card_id'}, status=400)
+        
+        try:
+            player = User.objects.get(id=player_id)
+            print(f"✓ Player found: {player.username} (ID: {player.id})")
+        except User.DoesNotExist:
+            print(f"✗ Player not found: {player_id}")
+            return Response({'error': 'Игрок не найден'}, status=404)
+        
+        try:
+            player_card = PlayerCard.objects.get(id=card_id, player=player, room=room)
+            print(f"✓ PlayerCard found: {player_card.id}, card: {player_card.card.title}")
+            print(f"  Card visible: {player_card.is_visible}, used: {player_card.is_used}")
+        except PlayerCard.DoesNotExist:
+            print(f"✗ PlayerCard not found: card_id={card_id}, player_id={player_id}, room={room_code}")
+            # Покажем какие карты есть у этого игрока
+            player_cards = PlayerCard.objects.filter(player=player, room=room)
+            print(f"  Available cards for player {player.username}:")
+            for pc in player_cards:
+                print(f"    - ID: {pc.id}, Card: {pc.card.title}, Visible: {pc.is_visible}, Used: {pc.is_used}")
+            return Response({'error': 'Карта не найдена у этого игрока'}, status=404)
         
         # Проверяем, что сейчас фаза game
         if game_state.current_phase != 'game':
+            print(f"✗ Wrong phase: {game_state.current_phase}, expected 'game'")
             return Response({'error': 'Сейчас не фаза игрового стола'}, status=400)
         
         # Проверяем, что это ход текущего игрока
-        if game_state.current_player.id != player_id:
+        players_list = list(room.current_players.all())
+        print(f"Players in room: {[p.username for p in players_list]}")
+        print(f"Current player index: {game_state.current_player_index}")
+        
+        if not (0 <= game_state.current_player_index < len(players_list)):
+            print(f"✗ Invalid player index: {game_state.current_player_index}, players count: {len(players_list)}")
+            return Response({'error': 'Ошибка определения текущего игрока'}, status=400)
+        
+        current_player = players_list[game_state.current_player_index]
+        print(f"Current player should be: {current_player.username} (ID: {current_player.id})")
+        
+        if current_player.id != player.id:
+            print(f"✗ Not player's turn: {player.username} vs current: {current_player.username}")
             return Response({'error': 'Сейчас не ваш ход'}, status=400)
         
-        # Проверяем, что карта еще не открыта
-        if player_card.is_visible:
-            return Response({'error': 'Эта карта уже открыта'}, status=400)
+        # Проверяем, что карта еще не открыта и не использована
+        if player_card.is_visible or player_card.is_used:
+            print(f"✗ Card already used: visible={player_card.is_visible}, used={player_card.is_used}")
+            return Response({'error': 'Эта карта уже использована'}, status=400)
         
         # Открываем карту
         player_card.is_visible = True
         player_card.save()
+        print(f"✓ Card opened: {player_card.card.title}")
         
         # Передаем ход следующему игроку
-        players = list(room.current_players.all())
-        current_index = list(players).index(game_state.current_player)
-        next_index = (current_index + 1) % len(players)
-        
-        game_state.current_player = players[next_index]
+        next_index = (game_state.current_player_index + 1) % len(players_list)
         game_state.current_player_index = next_index
+        game_state.save()
+        
+        print(f"✓ Turn passed to player index: {next_index}")
         
         # Проверяем, все ли игроки сделали ход в этом раунде
+        players_moved_counts = []
+        for p in players_list:
+            count = PlayerCard.objects.filter(
+                player=p, 
+                room=room, 
+                is_visible=True,
+                is_used=False
+            ).count()
+            players_moved_counts.append(f"{p.username}: {count}")
+        
+        print(f"Visible cards per player: {', '.join(players_moved_counts)}")
+        
         all_players_moved = all(
             PlayerCard.objects.filter(
                 player=p, 
                 room=room, 
-                is_visible=True
+                is_visible=True,
+                is_used=False
             ).count() >= game_state.current_round 
-            for p in players
+            for p in players_list
         )
+        
+        print(f"All players moved in round {game_state.current_round}: {all_players_moved}")
         
         if all_players_moved:
             # Переходим к фазе обсуждения
             game_state.current_phase = 'discussion'
-        
-        game_state.save()
+            game_state.save()
+            
+            # Помечаем все открытые карты как использованные в этом раунде
+            updated = PlayerCard.objects.filter(
+                room=room,
+                is_visible=True,
+                is_used=False
+            ).update(is_used=True)
+            
+            print(f"✓ Moved to discussion phase, marked {updated} cards as used")
         
         return Response({
+            'success': True,
             'message': 'Ход успешно сделан',
             'opened_card': player_card.card.title,
-            'next_player': game_state.current_player.username,
+            'next_player_index': game_state.current_player_index,
             'phase': game_state.current_phase
         })
         
     except Exception as e:
+        print(f"\n✗ ERROR in make_move: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return Response({'error': str(e)}, status=500)
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def vote(request, room_code):
-    """Игрок голосует за исключение другого игрока"""
+    """
+    Игрок голосует за исключение другого игрока
+    Фаза 3 по ТЗ
+    """
     try:
         room = get_object_or_404(Room, code=room_code)
         game_state = get_object_or_404(GameState, room=room)
@@ -886,28 +834,51 @@ def vote(request, room_code):
         voter_id = request.data.get('voter_id')
         target_player_id = request.data.get('player_id')
         
-        voter = get_object_or_404(User, id=voter_id)
-        target_player = get_object_or_404(User, id=target_player_id)
+        if not voter_id or not target_player_id:
+            return Response({'error': 'Не указаны voter_id или player_id'}, status=400)
         
-        # Проверяем, что сейчас фаза голосования
+        # Проверяем, что сейчас фаза voting
         if game_state.current_phase != 'voting':
             return Response({'error': 'Сейчас не фаза голосования'}, status=400)
         
+        voter = get_object_or_404(User, id=voter_id)
+        target_player = get_object_or_404(User, id=target_player_id)
+        
         # Проверяем, что игрок не голосует за себя
-        if voter_id == target_player_id:
+        if voter.id == target_player.id:
             return Response({'error': 'Нельзя голосовать за себя'}, status=400)
         
         # Проверяем, что оба игрока в комнате
-        if not room.current_players.filter(id=voter_id).exists():
+        if not room.current_players.filter(id=voter.id).exists():
             return Response({'error': 'Вы не в этой комнате'}, status=400)
-        if not room.current_players.filter(id=target_player_id).exists():
+        if not room.current_players.filter(id=target_player.id).exists():
             return Response({'error': 'Игрок не найден в комнате'}, status=400)
         
-        # Здесь нужно добавить модель Vote для сохранения голосов
-        # Пока просто возвращаем успех
+        # Проверяем, не голосовал ли уже этот игрок в этом раунде
+        existing_vote = Vote.objects.filter(
+            room=room,
+            voter=voter,
+            round_number=game_state.current_round
+        ).first()
+        
+        if existing_vote:
+            # Обновляем существующий голос
+            existing_vote.target_player = target_player
+            existing_vote.save()
+            message = 'Голос изменен'
+        else:
+            # Создаем новый голос
+            Vote.objects.create(
+                room=room,
+                voter=voter,
+                target_player=target_player,
+                round_number=game_state.current_round
+            )
+            message = 'Голос принят'
         
         return Response({
-            'message': 'Голос принят',
+            'success': True,
+            'message': message,
             'voter': voter.username,
             'target': target_player.username
         })
@@ -916,38 +887,81 @@ def vote(request, room_code):
         return Response({'error': str(e)}, status=500)
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def time_discussion_end(request, room_code):
-    """Завершение времени обсуждения"""
+    """
+    Завершение времени обсуждения
+    Фаза 2 по ТЗ
+    """
     try:
         room = get_object_or_404(Room, code=room_code)
         game_state = get_object_or_404(GameState, room=room)
         
+        # Проверяем, что сейчас фаза discussion
         if game_state.current_phase != 'discussion':
             return Response({'error': 'Сейчас не фаза обсуждения'}, status=400)
         
-        # Переходим к голосованию
-        game_state.current_phase = 'voting'
-        game_state.save()
+        # Проверяем, в каком раунде мы находимся
+        if game_state.current_round in [2, 3]:
+            # Для раундов 2 и 3 переходим к голосованию
+            game_state.current_phase = 'voting'
+            game_state.save()
+            
+            # Сбрасываем голоса за этот раунд
+            Vote.objects.filter(room=room, round_number=game_state.current_round).delete()
+        elif game_state.current_round == 1:
+            # Для раунда 1 переходим ко второму раунду
+            game_state.current_round = 2
+            game_state.current_phase = 'game'
+            game_state.current_player_index = 0  # Сбрасываем на первого игрока
+            game_state.save()
+        elif game_state.current_round == 4:
+            # Для раунда 4 переходим к финалу
+            game_state.current_phase = 'final'
+            game_state.save()
         
         return Response({
-            'message': 'Обсуждение завершено, начинается голосование',
-            'phase': game_state.current_phase
+            'success': True,
+            'message': 'Обсуждение завершено',
+            'phase': game_state.current_phase,
+            'round': game_state.current_round
         })
         
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
+
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def time_voting_end(request, room_code):
-    """Завершение времени голосования"""
+    """
+    Завершение времени голосования
+    Фаза 4 по ТЗ
+    """
     try:
         room = get_object_or_404(Room, code=room_code)
         game_state = get_object_or_404(GameState, room=room)
         
+        # Проверяем, что сейчас фаза voting
         if game_state.current_phase != 'voting':
             return Response({'error': 'Сейчас не фаза голосования'}, status=400)
         
-        # Здесь должна быть логика подсчета голосов и исключения игрока
+        # Получаем все голоса за текущий раунд
+        votes = Vote.objects.filter(room=room, round_number=game_state.current_round)
+        
+        # Подсчитываем голоса
+        vote_counts = Counter(vote.target_player_id for vote in votes)
+        
+        if vote_counts:
+            # Находим игрока с максимальным количеством голосов
+            most_voted_player_id, max_votes = vote_counts.most_common(1)[0]
+            
+            # Исключаем игрока
+            excluded_player = get_object_or_404(User, id=most_voted_player_id)
+            RoomPlayer.objects.filter(room=room, player=excluded_player).delete()
+            
+            # Удаляем его карты
+            PlayerCard.objects.filter(room=room, player=excluded_player).delete()
         
         # Переходим к следующему раунду
         game_state.current_round += 1
@@ -960,11 +974,14 @@ def time_voting_end(request, room_code):
         else:
             # Начинаем следующий раунд
             game_state.current_phase = 'game'
+            game_state.current_player_index = 0  # Сбрасываем на первого игрока
         
         game_state.save()
         
         return Response({
+            'success': True,
             'message': 'Голосование завершено',
+            'excluded_player': excluded_player.username if 'excluded_player' in locals() else None,
             'current_round': game_state.current_round,
             'phase': game_state.current_phase
         })
@@ -995,3 +1012,53 @@ def get_danger_description(round_number):
         4: "Критический уровень радиации. Внешняя температура -60°C."
     }
     return dangers.get(round_number, "")
+
+def get_nickname(user):
+    """Получение nickname пользователя"""
+    try:
+        profile = UserProfile.objects.get(user=user)
+        return profile.nickname if profile.nickname else user.username
+    except UserProfile.DoesNotExist:
+        return user.username
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_game_results(request, room_code):
+    """
+    Получение результатов игры (для фазы final)
+    """
+    try:
+        room = get_object_or_404(Room, code=room_code)
+        game_state = get_object_or_404(GameState, room=room)
+        
+        if game_state.current_phase != 'final':
+            return Response({'error': 'Игра еще не завершена'}, status=400)
+        
+        # Получаем оставшихся игроков
+        remaining_players = room.current_players.all()
+        
+        results = []
+        for player in remaining_players:
+            player_cards = PlayerCard.objects.filter(player=player, room=room, is_visible=True)
+            cards_info = [{
+                'type': pc.card.get_card_type_display(),
+                'title': pc.card.title,
+                'description': pc.card.description
+            } for pc in player_cards]
+            
+            results.append({
+                'player_id': player.id,
+                'nickname': get_nickname(player),
+                'cards': cards_info
+            })
+        
+        return Response({
+            'success': True,
+            'catastrophe': game_state.catastrophe_card.description if game_state.catastrophe_card else '',
+            'bunker': game_state.bunker_card.description if game_state.bunker_card else '',
+            'winners': results,
+            'total_players': remaining_players.count()
+        })
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)

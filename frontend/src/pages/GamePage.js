@@ -87,13 +87,18 @@ const GamePage = () => {
    const makeMove = async (cardId) => {
       try {
          const token = localStorage.getItem('token');
-         const playerId = localStorage.getItem('user_id');
+         const playerId = localStorage.getItem('id');
+         
+         if (!playerId) {
+            setError("Ошибка: не найден ID пользователя");
+            return;
+         }
          
          const result = await PostService.postData(
             `http://localhost:8000/make_move/${code}/`,
             {
-            player_id: parseInt(playerId),
-            card_id: cardId
+               player_id: parseInt(playerId),
+               card_id: parseInt(cardId)
             },
             'json',
             token
@@ -102,7 +107,7 @@ const GamePage = () => {
          if (result?.ok || result?.success) {
             fetchGameData();
          } else {
-            setError("Ошибка хода");
+            setError("Ошибка хода: " + (result?.data?.error || result?.error || 'Неизвестная ошибка'));
          }
       } catch (error) {
          setError("Ошибка отправки хода");
