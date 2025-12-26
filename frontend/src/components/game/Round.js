@@ -25,7 +25,7 @@ const Round = (
                      <div className="my-auto me-2" style={{color: 'red'}}>Игровой стол</div>
                   )}
                   <i className={`bi bi-arrow-right`}  style={{fontSize: '2rem'}}></i>
-                  <i className={`bi bi-mic-fill ms-2 me-2`}  style={{fontSize: '2rem', color: (is_current && current_phase === "discussion") ? 'red' : 'black', marginRight: (is_current && current_phase === "discussion") ? '0' : "2rem"}}></i>
+                  <i className={`bi bi-mic-fill mx-2`}  style={{fontSize: '2rem', color: (is_current && current_phase === "discussion") ? 'red' : 'black', marginRight: (is_current && current_phase === "discussion") ? '0' : "2rem"}}></i>
                   {(is_current && current_phase === "discussion") && (
                      <div className="my-auto me-4" style={{color: 'red'}}>Обсуждение</div>
                   )}

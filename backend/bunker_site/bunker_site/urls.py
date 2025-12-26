@@ -60,6 +60,7 @@ urlpatterns = [
     path('vote/<str:room_code>/', vote, name='vote'),
     path('time_discussion_end/<str:room_code>/', time_discussion_end, name='time-discussion-end'),
     path('time_voting_end/<str:room_code>/', time_voting_end, name='time-voting-end'),
+    path('get_voting_info/<str:room_code>/', get_voting_info, name='get-voting-info'),
     
     # Swagger/OpenAPI
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

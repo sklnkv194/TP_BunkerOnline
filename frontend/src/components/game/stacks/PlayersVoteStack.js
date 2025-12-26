@@ -1,66 +1,60 @@
 import { useState } from "react";
 import PlayerCardVoteStack from "./PlayerCardVoteStack";
-import { PostService } from "../../../scripts/post-service";
 
-const PlayersVoteStack = (
-   { 
-      players, 
-      phase, 
-      onVote
-   }
-) => {
-const [userVote, setUserVote] = useState(null);
+const PlayersVoteStack = ({ 
+   players, 
+   phase, 
+   onVote 
+}) => {
+   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
+   const currentUserId = parseInt(localStorage.getItem('user_id'));
 
-const handleVote = async (voteData) => {
-   const { voterId, targetPlayerId } = voteData;
-   const token = localStorage.getItem('token');
-
-   try {
-      const response = await PostService.postData('http://localhost:8000/vote/', {
-            voter_id: voterId,
-            player_id: targetPlayerId
-         }, 'form', token);
-      
-      if (response.ok) {
-         setUserVote(targetPlayerId);
+   const handlePlayerVote = async (playerId) => {
+      if (selectedPlayerId !== null) {
+         // Уже проголосовали
+         return;
       }
-   } catch (error) {
-      console.error("Ошибка отправки голоса:", error);
-   }
-};
-const hasUserVoted = userVote !== null;
 
-const currentUserId = parseInt(localStorage.getItem('user_id'));
+      // Обновляем UI сразу для лучшего UX
+      setSelectedPlayerId(playerId);
+      
+      // Вызываем родительскую функцию для отправки на сервер
+      if (onVote) {
+         onVote(playerId);  // ← Это должен вызвать handleVote в GamePage
+      }
+   };
 
-return (
-   <div className="d-flex flex-row flex-wrap w-100" style={{gap: "1rem"}}> 
-      {players.map(player => {
-         //проверяем может ли текущий пользователь голосовать за этого игрока
-         const canVoteForThisPlayer = player.canVote && player.id !== currentUserId;
-         
-         return (
-            <div key={player.id} className="mb-2" style={{width: 'calc(25% - 0.75rem)'}}>
-               <PlayerCardVoteStack
-                  nickname={player.nickname}
-                  cards={player.cards || []}
-                  phase={phase}
-                  playerId={player.id}
-                  canVote={canVoteForThisPlayer}
-                  isVotedFor={userVote === player.id}
-                  hasUserVoted={hasUserVoted}
-                  onVote={async (voteData) => {
-                     if (onVote) {
-                     await onVote(voteData.playerId);
-                     setUserVote(voteData.playerId); 
-                     }
-                  }}
-               />
-            </div>
-         );
-      })}
-   
-   </div>
-);
+   const hasUserVoted = selectedPlayerId !== null;
+
+   return (
+      <div className="d-flex flex-row flex-wrap w-100" style={{gap: "1rem"}}> 
+         {players.map(player => {
+            // Проверяем может ли текущий пользователь голосовать за этого игрока
+            // 1. Нельзя голосовать за себя
+            // 2. Должен быть canVote = true от сервера
+            // 3. Игрок не должен быть исключен
+            const canVote = player.canVote && 
+                           player.playerId !== currentUserId && 
+                           !player.is_excluded &&
+                           !hasUserVoted; // Нельзя голосовать если уже проголосовал
+            
+            return (
+               <div key={player.playerId} className="mb-2" style={{width: 'calc(25% - 0.75rem)'}}>
+                  <PlayerCardVoteStack
+                     nickname={player.nickname}
+                     cards={player.cards || []}
+                     phase={phase}
+                     playerId={player.playerId}
+                     canVote={canVote}
+                     isVotedFor={selectedPlayerId === player.playerId}
+                     hasUserVoted={hasUserVoted}
+                     onVote={() => handlePlayerVote(player.playerId)}
+                  />
+               </div>
+            );
+         })}
+      </div>
+   );
 };
 
 export default PlayersVoteStack;
