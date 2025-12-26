@@ -142,6 +142,16 @@ class Room(models.Model):
             self.status == 'waiting' and 
             self.get_players_count() < self.max_players
         )
+        
+    def get_current_players(self):
+        """Получение текущих игроков через RoomPlayer"""
+        return User.objects.filter(
+            id__in=RoomPlayer.objects.filter(room=self).values('player_id')
+        )
+    
+    def get_current_players_count(self):
+        """Получение количества текущих игроков"""
+        return RoomPlayer.objects.filter(room=self).count()
     
     class Meta:
         verbose_name = "Комната"

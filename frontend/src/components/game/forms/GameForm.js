@@ -19,15 +19,10 @@ const GameForm = ({
   onMakeMove,
   onVote,
   onDiscussionEnd,
-  onVotingEnd
+  onVotingEnd,
+  votingResult
 }) => {
-  console.log("GameForm props:");
-  console.log("- phase:", phase);
-  console.log("- openCards:", openCards);
-  console.log("- openCards length:", openCards?.length);
-  console.log("- playerCards:", playerCards);
-  console.log("- playersData:", playersData);
-  console.log("- rounds:", rounds);
+
   return(
     <div>
       <CatastropheBunkerInfo catastrophe={catastrophe} bunker={bunker}/>
@@ -36,9 +31,11 @@ const GameForm = ({
         Комната #{code}
       </div>
       <RoundStack rounds={rounds}/>
-      <OpenCardStack cards={openCards}/>
+      
       {(phase === "game") && (
+
         <div>
+          <OpenCardStack cards={openCards}/>
           <div className="fw-bolder mt-4" style={{ color: "#94D2BD"}}>
             Мои карты
           </div>
@@ -50,6 +47,7 @@ const GameForm = ({
           phase={phase}
           onDiscussionEnd={onDiscussionEnd}
           onVotingEnd={onVotingEnd}
+          votingResult={votingResult}
         />
       )}
      

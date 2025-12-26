@@ -291,7 +291,7 @@ const GameWaitingForm = () => {
                   </div>
                     {is_owner ? (
                         <Button
-                     
+                           className="ms-4"
                            onClick={handleStartGame}
                            disabled={loading || connected_players_count < 3}
                         >

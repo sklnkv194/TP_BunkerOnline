@@ -68,7 +68,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "bunkerDB",
         "USER": "postgres",
-        "PASSWORD": "postgres",
+        "PASSWORD": "root",
         "HOST": "localhost",
         "PORT": "5432",
     }

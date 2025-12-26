@@ -5,7 +5,8 @@ const DiscussionVotingForm = (
   { 
    phase,
    onDiscussionEnd,
-   onVotingEnd
+   onVotingEnd,
+   votingResult 
   }
 ) => {
    const handleTimeEnd = async () => {
@@ -33,11 +34,25 @@ const DiscussionVotingForm = (
                <h3 className="fw-bold text-center">Пришло время обсудить открытые карты!</h3>
             )}
             {(phase === "voting") && (
+               <>
                <h3 className="fw-bold text-center">Пришло время выбрать того, кто покинет нас!</h3>
+               {votingResult && (
+                     <div className="alert alert-info mt-3">
+                        {votingResult.excluded_player_name ? (
+                           <p>Результат: <strong>{votingResult.excluded_player_name}</strong> выбыл!</p>
+                        ) : votingResult.tie ? (
+                           <p>Ничья! Никто не выбывает.</p>
+                        ) : (
+                           <p>Голосование завершено</p>
+                        )}
+                     </div>
+                  )}
+                  </>
             )} 
             <div className="text-center mt-4">
                <Timer
-                  duration={120}
+                  phase={phase}
+                  duration={20}
                   onTimeEnd={handleTimeEnd}
                />
             </div>

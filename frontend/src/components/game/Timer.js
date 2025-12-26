@@ -1,32 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
-const Timer = ({ duration, onTimeEnd }) => {
+// Timer.js - упрощенная версия
+const Timer = ({ duration, onTimeEnd, phase }) => {
    const [timeLeft, setTimeLeft] = useState(duration);
-   const [isRunning, setIsRunning] = useState(true);
+   const hasEnded = useRef(false);
 
    useEffect(() => {
-      let timer;
-      
-      if (isRunning && timeLeft > 0) {
-         timer = setInterval(() => {
-            setTimeLeft(prev => {
-               if (prev <= 1) {
-                  clearInterval(timer);
-                  setIsRunning(false);
-                  if (onTimeEnd) {
-                     onTimeEnd(); 
-                  }
-                  return 0;
-               }
-               return prev - 1;
-            });
-         }, 1000);
-      }
+      setTimeLeft(duration);
+      hasEnded.current = false;
+   }, [duration, phase]); // Сбрасываем при смене фазы
 
-      return () => {
-         if (timer) clearInterval(timer);
-      };
-   }, [isRunning, timeLeft, onTimeEnd]);
+   useEffect(() => {
+      if (timeLeft <= 0 || hasEnded.current) return;
+
+      const timer = setTimeout(() => {
+         setTimeLeft(prev => {
+            if (prev <= 1) {
+               if (!hasEnded.current) {
+                  hasEnded.current = true;
+                  onTimeEnd?.();
+               }
+               return 0;
+            }
+            return prev - 1;
+         });
+      }, 1000);
+
+      return () => clearTimeout(timer);
+   }, [timeLeft, onTimeEnd]);
 
    const formatTime = (seconds) => {
       const minutes = Math.floor(seconds / 60);
@@ -35,11 +36,15 @@ const Timer = ({ duration, onTimeEnd }) => {
    };
 
    return (
-      <div className="timer-container">
+      <div className="timer-container text-center">
          <div className='timer-display fs-1 fw-bold'>
             {formatTime(timeLeft)}
          </div>
-   
+         {timeLeft === 0 && (
+            <div className="text-danger small mt-1">
+               Время вышло!
+            </div>
+         )}
       </div>
    );
 };

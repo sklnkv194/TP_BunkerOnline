@@ -30,7 +30,7 @@ const PlayerCardVoteStack = ({
       
       try {
          //получаем айди голосующего пользователя
-         const voter_id = localStorage.getItem('user_id');
+         const voter_id = localStorage.getItem('id');
          
          if (onVote) {  
             await onVote({
@@ -50,7 +50,13 @@ const PlayerCardVoteStack = ({
 
 
    return (
-      <div className={`flex-column mt-4 ${isSelected ? 'border-primary border-3 rounded p-2' : ''}`} style={{filter: !canVote ? 'brightness(0.7)' : 'none'}}>
+         <div 
+            className={`flex-column mt-4 ${isSelected ? 'border border-3 rounded p-1' : ''}`}
+            style={{
+               borderColor: isSelected ? '#94D2BD' : undefined,
+               cursor: canVote ? 'pointer' : 'not-allowed'
+            }}
+         >       
          <div className="text-break text-center fw-bolder mb-2" style={{ color: "#94D2BD"}}>
             {nickname}
          </div>
