@@ -6,7 +6,7 @@ const PlayerOwnCardStack = ({
    phase
 }) => {
    
-   // Проверяем, есть ли карты у игрока
+   //проверяем, есть ли карты у игрока
    const hasCards = cards && cards.length > 0;
    
    return (

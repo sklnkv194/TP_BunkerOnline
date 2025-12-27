@@ -62,7 +62,6 @@ const GamePage = () => {
 
    useEffect(() => {
       if (!code || !userId) {
-         console.log("Waiting for userId...");
          return;
       }
       
@@ -75,14 +74,13 @@ const GamePage = () => {
       return () => {
          clearInterval(pollInterval);
       };
-   }, [code, userId]); // Добавляем userId в зависимости
+   }, [code, userId]); 
 
    useEffect(() => {
-      // Если фаза финальная И осталось больше 0 игроков
+      //если фаза финальная И осталось больше 0 игроков
       const shouldShowModal = (phase === 'final' || roomStatus === 'finished') && winners.length > 0;
       
       if (shouldShowModal && !hasShownModalRef.current) {
-         console.log("Показываем модалку финала - игра завершена");
          setShowFinalModal(true);
          hasShownModalRef.current = true;
       }
@@ -92,14 +90,12 @@ const GamePage = () => {
    const fetchInit = async () => {
       try {
          setLoading(true);
-         // Для гостей не используем токен
          const token = isGuest ? null : localStorage.getItem('token');
          
          const result = await GetService.getData(
             `http://localhost:8000/game_info_init/${code}/?user_id=${userId}`, 
             token
          );
-         console.log("Init result:", result)
 
          if (result) {
             const data = result;
@@ -119,7 +115,6 @@ const GamePage = () => {
    //обновление информации об игре
    const fetchGameData = async () => {
       try {
-         // Для гостей не используем токен
          const token = isGuest ? null : localStorage.getItem('token');
          
          const result = await GetService.getData(
@@ -129,7 +124,6 @@ const GamePage = () => {
          
          if (result) {
             const data = result.data || result;
-            console.log("Game data received:", data);
             
             setDanger(data.danger || "");
             setPhase(data.phase || "");
@@ -163,7 +157,6 @@ const GamePage = () => {
          }
       } catch (error) {
          console.error("Fetch game data error:", error);
-         // Не показываем ошибку пользователю для неавторизованных
          if (!isGuest) {
             setError("Ошибка соединения с сервером");
          }
@@ -183,7 +176,6 @@ const GamePage = () => {
             return;
          }
          
-         // Для гостей не используем токен
          const token = isGuest ? null : localStorage.getItem('token');
          
          const result = await PostService.postData(
@@ -214,7 +206,6 @@ const GamePage = () => {
             return;
          }
          
-         // Для гостей не используем токен
          const token = isGuest ? null : localStorage.getItem('token');
          
          const result = await PostService.postData(
@@ -247,7 +238,6 @@ const GamePage = () => {
             return;
          }
          
-         // Для гостей не используем токен
          const token = isGuest ? null : localStorage.getItem('token');
          
          const result = await PostService.postData(
@@ -278,7 +268,6 @@ const GamePage = () => {
             return;
          }
          
-         // Для гостей не используем токен
          const token = isGuest ? null : localStorage.getItem('token');
          
          const result = await PostService.postData(
@@ -298,14 +287,14 @@ const GamePage = () => {
       }
    };
 
-   // Подготавливаем список выживших
+   //подготавливаем список выживших
    const survivors = winners.map(winner => ({
       id: winner.player_id,
       nickname: winner.nickname,
       cards: winner.cards || []
    }));
 
-   // Если пользователь выбыл, показываем сообщение
+   //если пользователь выбыл, показываем сообщение
    if (currentUserExcluded && roomStatus === "active") {
       return (
          <PageLayout>
@@ -335,12 +324,12 @@ const GamePage = () => {
                         phase={phase}
                         rounds={rounds}
                         openCards={openCards}
-                        playerCards={[]} // Не показываем карты выбывшему
+                        playerCards={[]} 
                         playersData={playersData}
-                        onMakeMove={() => {}} // Заблокировано
-                        onVote={() => {}} // Заблокировано
-                        onDiscussionEnd={() => {}} // Заблокировано
-                        onVotingEnd={() => {}} // Заблокировано
+                        onMakeMove={() => {}} 
+                        onVote={() => {}} 
+                        onDiscussionEnd={() => {}}
+                        onVotingEnd={() => {}} 
                         votingResult={votingResult}
                      />
                   </div>
@@ -391,7 +380,6 @@ const GamePage = () => {
                votingResult={votingResult} 
             />
             
-            {/* Простое модальное окно окончания игры */}
             <FinalModal
                isOpen={showFinalModal}
                survivors={survivors}
