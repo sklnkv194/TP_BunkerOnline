@@ -249,8 +249,31 @@ def join_room(request):
     except Room.DoesNotExist:
         return Response({'error': 'Комната с таким кодом не найдена'}, status=404)
     
-    # Получаем или создаем пользователя
-    user = get_or_create_guest_user(request)
+    user_id = request.data.get('user_id')  # Получаем user_id из запроса
+    
+    if user_id:
+        # АВТОРИЗОВАННЫЙ пользователь - используем существующего
+        try:
+            user = User.objects.get(id=user_id)
+            print(f"Используем существующего пользователя: {user.username} (ID: {user.id})")
+            is_guest = False
+        except User.DoesNotExist:
+            return Response({'error': 'Пользователь не найден'}, status=404)
+    else:
+        # НЕАВТОРИЗОВАННЫЙ пользователь - создаем временного
+        random_name = random.choice(RANDOM_NAMES)
+        guest_username = f"guest_{random_name}"
+        
+        try:
+            user = User.objects.create_user(
+                username=guest_username,
+                password=None,
+                is_active=True
+            )
+            print(f"Создан временный пользователь: {guest_username} (ID: {user.id})")
+            is_guest = True
+        except Exception as e:
+            return Response({'error': f'Ошибка создания временного пользователя: {str(e)}'}, status=500)
     
     if room.status != 'waiting':
         return Response({'error': 'Игра уже началась'}, status=400)
@@ -265,14 +288,10 @@ def join_room(request):
     # Добавляем игрока в комнату
     RoomPlayer.objects.create(room=room, player=user)
     
-    # Если пользователь временный, получаем его имя
-    if hasattr(user, 'profile_temp'):
-        # Извлекаем случайное имя из username
-        username_parts = user.username.split('_')
-        if len(username_parts) >= 2 and username_parts[1] in RANDOM_NAMES:
-            display_name = username_parts[1]
-        else:
-            display_name = user.username
+    # Получаем отображаемое имя
+    if is_guest:
+        # Для гостей используем случайное имя
+        display_name = random_name
     else:
         # Для авторизованных пользователей используем nickname из профиля
         try:
@@ -286,7 +305,7 @@ def join_room(request):
         'room_id': room.id,
         'room_code': room.code,
         'is_owner': room.creator.id == user.id,
-        'is_guest': hasattr(user, 'profile_temp'),
+        'is_guest': is_guest,
         'user_id': user.id,
         'display_name': display_name,
         'players_count': room.get_players_count()
@@ -1444,12 +1463,10 @@ def finish_game(request, room_code):
         room = get_object_or_404(Room, code=room_code)
         game_state = get_object_or_404(GameState, room=room)
         
-        # Помечаем игру как завершенную
         room.status = 'finished'
         room.finished_at = timezone.now()
         room.save()
         
-        # Также обновляем GameState
         game_state.current_phase = 'final'
         game_state.save()
         
@@ -1462,53 +1479,3 @@ def finish_game(request, room_code):
         
     except Exception as e:
         return Response({'error': str(e)}, status=500)
-
-from django.db import transaction
-from django.contrib.auth.models import User
-import uuid
-
-def get_or_create_guest_user(request):
-    """
-    Создает или получает временного пользователя для неавторизованных
-    """
-    # Проверяем, авторизован ли пользователь
-    if request.user.is_authenticated:
-        return request.user
-    
-    # Для неавторизованных - создаем временного пользователя
-    guest_id = request.session.get('guest_user_id')
-    
-    if guest_id:
-        try:
-            user = User.objects.get(id=guest_id)
-            # Проверяем, что это временный пользователь
-            if not user.username.startswith('guest_'):
-                # Это обычный пользователь, создаем нового временного
-                user = None
-        except User.DoesNotExist:
-            user = None
-    else:
-        user = None
-    
-    if not user:
-        # Генерируем уникальное имя для гостя
-        random_name = random.choice(RANDOM_NAMES)
-        guest_username = f"guest_{random_name}"
-        
-        with transaction.atomic():
-            # Создаем нового временного пользователя
-            user = User.objects.create_user(
-                username=guest_username,
-                password=None,  # Без пароля
-                is_active=True
-            )
-            
-            # Помечаем как временного пользователя
-            user.profile_temp = True  # Используем custom attribute
-            user.save()
-        
-        # Сохраняем ID в сессии
-        request.session['guest_user_id'] = user.id
-        request.session.set_expiry(60 * 60 * 24)  # Сессия на 24 часа
-    
-    return user
