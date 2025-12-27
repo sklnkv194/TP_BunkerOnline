@@ -6,23 +6,19 @@ import { GetService } from "../../../scripts/get-service";
 import { PostService } from "../../../scripts/post-service";
 import { useParams, useSearchParams } from "react-router-dom";
 
-// Хук для получения userId (можно вынести в отдельный файл)
 const useUserId = () => {
    const [userId, setUserId] = useState(null);
    const [isGuest, setIsGuest] = useState(false);
    
    useEffect(() => {
-      // Проверяем авторизованного пользователя
       const authUserId = localStorage.getItem('id');
       const currentUserId = localStorage.getItem('current_user_id');
       const guestFlag = localStorage.getItem('is_guest');
       
       if (authUserId) {
-         // Авторизованный пользователь
          setUserId(parseInt(authUserId));
          setIsGuest(false);
       } else if (currentUserId) {
-         // Гостевой пользователь
          setUserId(parseInt(currentUserId));
          setIsGuest(guestFlag === 'true');
       }
@@ -48,10 +44,8 @@ const GameWaitingForm = () => {
 
    const fetchRoomData = async () => {
       try {
-         // Для гостей не используем токен
          const token = isGuest ? null : localStorage.getItem('token');
          
-         // Добавляем user_id в запрос для всех типов пользователей
          const params = userId ? `?user_id=${userId}` : '';
          
          const result = await GetService.getData(
@@ -66,19 +60,19 @@ const GameWaitingForm = () => {
             setConnectedPlayersCount(result.players_count);
             setAllPlayersCount(result.max_players);
 
-            // Проверяем, находится ли текущий пользователь в комнате
+            //проверяем, находится ли текущий пользователь в комнате
             if (userId && result.players) {
                const isPlayerInRoom = result.players.some(player => player.id === userId);
                
                if (!isPlayerInRoom) {
-                  // Если пользователя нет в комнате - возвращаем на главную
+                  //если пользователя нет в комнате - возвращаем на главную
                   navigate('/');
                   return;
                }
             }
 
             if (result.status === 'active') {
-               // Игра началась - редирект на страницу игры
+               //игра началась - редирект на страницу игры
                navigate(`/game/${gameId}`);
                return;
             }
@@ -95,7 +89,6 @@ const GameWaitingForm = () => {
    useEffect(() => {
       if (!gameId) return;
       
-      // Если userId еще не определен, ждем немного
       if (!userId) {
          const timer = setTimeout(() => {
             fetchRoomData();
@@ -122,16 +115,14 @@ const GameWaitingForm = () => {
       setLoading(true);
       setError("");
       try {
-         // Для DELETE запросов гостям тоже нужен user_id в URL
          const url = `http://localhost:8000/rooms/${gameId}/players/${userId}/`;
          
          const result = await DeleteService.deleteData(
             url,
-            null // токен не нужен для гостей
+            null 
          );
          
          if (result) {
-            // Очищаем guest данные при выходе
             if (isGuest) {
                localStorage.removeItem('current_user_id');
                localStorage.removeItem('is_guest');
@@ -149,7 +140,7 @@ const GameWaitingForm = () => {
    };
 
    const handleDeleteRoom = async () => {
-      if (!is_owner) return; // Только создатель может удалить комнату
+      if (!is_owner) return; 
       
       if (!window.confirm("Вы уверены, что хотите удалить комнату? Все игроки будут исключены.")) {
          return;
@@ -165,7 +156,6 @@ const GameWaitingForm = () => {
          );
          
          if (result) {
-            // Очищаем guest данные при удалении комнаты
             if (isGuest) {
                localStorage.removeItem('current_user_id');
                localStorage.removeItem('is_guest');
@@ -183,7 +173,6 @@ const GameWaitingForm = () => {
    };
 
    const handleDeletePlayer = async (playerId) => {
-      // Только создатель комнаты может удалять игроков
       if (!is_owner) return;
       
       if (!window.confirm("Вы уверены, что хотите удалить этого игрока из комнаты?")) {
@@ -200,7 +189,6 @@ const GameWaitingForm = () => {
          );
          
          if (result) {
-            // Обновляем список игроков
             fetchRoomData();
          } else {
             setError(result.data?.error || "Ошибка удаления игрока");
@@ -213,7 +201,7 @@ const GameWaitingForm = () => {
    };
 
    const handleStartGame = async () => {
-      if (!is_owner) return; // Только создатель может начать игру
+      if (!is_owner) return;
       
       setLoading(true);
       setError("");

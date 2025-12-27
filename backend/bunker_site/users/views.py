@@ -253,9 +253,7 @@ def update_nickname(request, user_id):
             return Response({"error": f"Ошибка при смене никнейма: {str(e)}"}, status=400)
 
 @api_view(['GET'])
-def check_reset_token(request, token):
-    print(f"📨 Проверка токена: {token}")
-    
+def check_reset_token(request, token):    
     try:
         user_profile = UserProfile.objects.get(
             reset_token=token,
@@ -278,7 +276,6 @@ def change_password(request, user_id):
         try:
             user = User.objects.get(id=user_id)
             
-            # ИСПОЛЬЗУЕМ ИМЕНА ПОЛЕЙ КАК ВО ФРОНТЕНДЕ
             current_password = request.data.get('current_password')
             new_password = request.data.get('new_password') 
             new_password_conf = request.data.get('new_password_conf')

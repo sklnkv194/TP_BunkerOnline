@@ -34,15 +34,12 @@ const ConnectToRoomForm = ({id=""}) => {
          setLoading(true);
          setInternalError("");
          
-         // Получаем user_id из localStorage (если есть)
          let user_id = localStorage.getItem('id');
          let requestData = { code: formData.room_code };
          
-         // Если пользователь авторизован - добавляем user_id
          if (user_id) {
             requestData.user_id = parseInt(user_id);
          }
-         // Если не авторизован - не передаем user_id, бэкенд создаст временного
          
          const result = await PostService.postData(
             'http://localhost:8000/rooms/join_room/', 
@@ -51,18 +48,14 @@ const ConnectToRoomForm = ({id=""}) => {
          );
          
          if (result && result.ok){
-            // Сохраняем user_id, который вернул бэкенд (особенно важно для гостей)
             const { user_id: returnedUserId, display_name, is_guest, room_code } = result.data;
             
-            // Сохраняем данные в localStorage
             if (returnedUserId) {
                localStorage.setItem('current_user_id', returnedUserId);
                
-               // Если это гость, сохраняем дополнительную информацию
                if (is_guest) {
                   localStorage.setItem('is_guest', 'true');
                   localStorage.setItem('guest_display_name', display_name);
-                  // Для гостей можно сохранить специальный флаг, если нужно
                } else {
                   localStorage.setItem('is_guest', 'false');
                }
