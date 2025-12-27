@@ -7,13 +7,45 @@ import { useParams, useNavigate } from "react-router-dom";
 import { GetService } from "../scripts/get-service";
 import { PostService } from "../scripts/post-service";
 
+// Хук для получения userId
+const useUserId = () => {
+   const [userId, setUserId] = useState(null);
+   const [isGuest, setIsGuest] = useState(false);
+   const [displayName, setDisplayName] = useState('');
+   
+   useEffect(() => {
+      // Проверяем авторизованного пользователя
+      const authUserId = localStorage.getItem('id');
+      const currentUserId = localStorage.getItem('current_user_id');
+      const guestFlag = localStorage.getItem('is_guest');
+      const guestName = localStorage.getItem('guest_display_name');
+      
+      if (authUserId) {
+         // Авторизованный пользователь
+         setUserId(parseInt(authUserId));
+         setIsGuest(false);
+         setDisplayName('');
+      } else if (currentUserId) {
+         // Гостевой пользователь
+         setUserId(parseInt(currentUserId));
+         setIsGuest(guestFlag === 'true');
+         setDisplayName(guestName || 'Гость');
+      }
+   }, []);
+   
+   return { userId, isGuest, displayName };
+};
+
 const GamePage = () => {
    const { code } = useParams();
    const navigate = useNavigate();
+   
+   const { userId, isGuest, displayName } = useUserId();
 
    const [loading, setLoading] = useState(false);
    const [error, setError] = useState("");
    const [showFinalModal, setShowFinalModal] = useState(false);
+   const [currentUserExcluded, setCurrentUserExcluded] = useState(false);
 
    const [catastrophe, setCatastrophe] = useState("");
    const [bunker, setBunker] = useState("");
@@ -25,10 +57,15 @@ const GamePage = () => {
    const [playersData, setPlayerData] = useState([]);
    const [votingResult, setVotingResult] = useState(null);
    const [winners, setWinners] = useState([]);
+   const [roomStatus, setRoomStatus] = useState("active");
    const hasShownModalRef = useRef(false);
 
    useEffect(() => {
-      if (!code) return;
+      if (!code || !userId) {
+         console.log("Waiting for userId...");
+         return;
+      }
+      
       fetchInit();
       
       const pollInterval = setInterval(() => {
@@ -38,28 +75,31 @@ const GamePage = () => {
       return () => {
          clearInterval(pollInterval);
       };
-   }, [code]);
+   }, [code, userId]); // Добавляем userId в зависимости
 
    useEffect(() => {
       // Если фаза финальная И осталось больше 0 игроков
-      const shouldShowModal = phase === 'final' && winners.length > 0;
-      console.log(phase, playersData.length)
+      const shouldShowModal = (phase === 'final' || roomStatus === 'finished') && winners.length > 0;
+      
       if (shouldShowModal && !hasShownModalRef.current) {
          console.log("Показываем модалку финала - игра завершена");
          setShowFinalModal(true);
          hasShownModalRef.current = true;
       }
-   }, [phase, winners]);
+   }, [phase, winners, roomStatus]);
 
    //инициализация игры
    const fetchInit = async () => {
       try {
          setLoading(true);
-         const token = localStorage.getItem('token');
-         const userId = localStorage.getItem('id');
+         // Для гостей не используем токен
+         const token = isGuest ? null : localStorage.getItem('token');
          
-         const result = await GetService.getData(`http://localhost:8000/game_info_init/${code}/?user_id=${userId}`, token);
-         console.log(result)
+         const result = await GetService.getData(
+            `http://localhost:8000/game_info_init/${code}/?user_id=${userId}`, 
+            token
+         );
+         console.log("Init result:", result)
 
          if (result) {
             const data = result;
@@ -70,7 +110,7 @@ const GamePage = () => {
             setError(result?.data?.error || result?.error || "Ошибка загрузки данных об игре");
          }
       } catch (error) {
-         setError("Ошибка соединения с сервером");
+         setError("Ошибка соединения с сервером: " + error.message);
       } finally {
          setLoading(false);
       }
@@ -79,11 +119,17 @@ const GamePage = () => {
    //обновление информации об игре
    const fetchGameData = async () => {
       try {
-         const token = localStorage.getItem('token');
-         const userId = localStorage.getItem('id');
-         const result = await GetService.getData(`http://localhost:8000/game_info/${code}/?user_id=${userId}`, token);
+         // Для гостей не используем токен
+         const token = isGuest ? null : localStorage.getItem('token');
+         
+         const result = await GetService.getData(
+            `http://localhost:8000/game_info/${code}/?user_id=${userId}`, 
+            token
+         );
+         
          if (result) {
             const data = result.data || result;
+            console.log("Game data received:", data);
             
             setDanger(data.danger || "");
             setPhase(data.phase || "");
@@ -91,15 +137,22 @@ const GamePage = () => {
             setOpenCards(data.openCards || []);
             setPlayerCards(data.playerCards || []);
             setPlayerData(data.playersData || []);
+            setRoomStatus(data.room_status || "active");
+            setCurrentUserExcluded(data.current_user_is_excluded || false);
+            
             if (data.winners) {
                setWinners(data.winners);
             }
-            if (data.vote_results) {
-               setVotingResult(data.vote_results);
+            
+            if (data.vote_results || data.vote_counts) {
+               setVotingResult(data.vote_results || {
+                  vote_counts: data.vote_counts,
+                  total_votes: data.total_votes
+               });
                
-               if (data.vote_results.excluded_player_name) {
+               if (data.vote_results?.excluded_player_name) {
                   setError(`Игрок ${data.vote_results.excluded_player_name} выбыл!`);
-               } else if (data.vote_results.tie) {
+               } else if (data.vote_results?.tie) {
                   setError("Ничья! Никто не выбывает в этом раунде.");
                }
             }
@@ -110,24 +163,33 @@ const GamePage = () => {
          }
       } catch (error) {
          console.error("Fetch game data error:", error);
+         // Не показываем ошибку пользователю для неавторизованных
+         if (!isGuest) {
+            setError("Ошибка соединения с сервером");
+         }
       }
    };
 
    //игрок делает ход
    const makeMove = async (cardId) => {
       try {
-         const token = localStorage.getItem('token');
-         const playerId = localStorage.getItem('id');
-         
-         if (!playerId) {
+         if (!userId) {
             setError("Ошибка: не найден ID пользователя");
             return;
          }
          
+         if (currentUserExcluded) {
+            setError("Вы не можете делать ход, так как выбыли из игры");
+            return;
+         }
+         
+         // Для гостей не используем токен
+         const token = isGuest ? null : localStorage.getItem('token');
+         
          const result = await PostService.postData(
             `http://localhost:8000/make_move/${code}/`,
             {
-               player_id: parseInt(playerId),
+               player_id: userId,
                card_id: parseInt(cardId)
             },
             'json',
@@ -140,19 +202,25 @@ const GamePage = () => {
             setError("Ошибка хода: " + (result?.data?.error || result?.error || 'Неизвестная ошибка'));
          }
       } catch (error) {
-         setError("Ошибка отправки хода");
+         setError("Ошибка отправки хода: " + error.message);
       }
    };
 
    //флаг окончания времени голосования
    const endDiscussionTime = async () => {
       try {
-         const token = localStorage.getItem('token');
+         if (currentUserExcluded) {
+            setError("Вы не можете управлять временем, так как выбыли из игры");
+            return;
+         }
+         
+         // Для гостей не используем токен
+         const token = isGuest ? null : localStorage.getItem('token');
          
          const result = await PostService.postData(
             `http://localhost:8000/time_discussion_end/${code}/`,
             {
-            time_discussion_over: true
+               time_discussion_over: true
             },
             'json',
             token
@@ -162,21 +230,31 @@ const GamePage = () => {
             fetchGameData();
          }
       } catch (error) {
-         setError("Ошибка завершения обсуждения");
+         setError("Ошибка завершения обсуждения: " + error.message);
       }
    };
 
    //игрок отдает голос
    const handleVote = async (playerId) => {
       try {
-         const token = localStorage.getItem('token');
-         const voterId = localStorage.getItem('id');
+         if (!userId) {
+            setError("Ошибка: не найден ID пользователя");
+            return;
+         }
+         
+         if (currentUserExcluded) {
+            setError("Вы не можете голосовать, так как выбыли из игры");
+            return;
+         }
+         
+         // Для гостей не используем токен
+         const token = isGuest ? null : localStorage.getItem('token');
          
          const result = await PostService.postData(
             `http://localhost:8000/vote/${code}/`,
             {
-            voter_id: parseInt(voterId),
-            player_id: playerId
+               voter_id: userId,
+               player_id: playerId
             },
             'json',
             token
@@ -188,13 +266,20 @@ const GamePage = () => {
          }
       } catch (error) {
          console.error("Ошибка голосования:", error);
+         setError("Ошибка голосования: " + error.message);
       }
    };
 
    //флаг об окончании голосования
    const endVotingTime = async () => {
       try {
-         const token = localStorage.getItem('token');
+         if (currentUserExcluded) {
+            setError("Вы не можете управлять временем, так как выбыли из игры");
+            return;
+         }
+         
+         // Для гостей не используем токен
+         const token = isGuest ? null : localStorage.getItem('token');
          
          const result = await PostService.postData(
             `http://localhost:8000/time_voting_end/${code}/`,
@@ -209,7 +294,7 @@ const GamePage = () => {
             fetchGameData();
          }
       } catch (error) {
-         setError("Ошибка завершения голосования");
+         setError("Ошибка завершения голосования: " + error.message);
       }
    };
 
@@ -220,10 +305,62 @@ const GamePage = () => {
       cards: winner.cards || []
    }));
 
+   // Если пользователь выбыл, показываем сообщение
+   if (currentUserExcluded && roomStatus === "active") {
+      return (
+         <PageLayout>
+            <Header/>
+            <div className="w-75 mx-auto mt-4">
+               <div className="alert alert-warning">
+                  <h4 className="alert-heading">Вы выбыли из игры</h4>
+                  <p>Вы можете наблюдать за продолжением игры, но не можете участвовать в голосованиях и ходах.</p>
+                  {isGuest && (
+                     <p className="mb-0">
+                        <i className="bi bi-person-badge me-1"></i>
+                        Вы играете как гость: <strong>{displayName}</strong>
+                     </p>
+                  )}
+               </div>
+               
+               <div className="card">
+                  <div className="card-header">
+                     <h5>Текущее состояние игры</h5>
+                  </div>
+                  <div className="card-body">
+                     <GameForm
+                        code={code}
+                        catastrophe={catastrophe}
+                        bunker={bunker}
+                        danger={danger}
+                        phase={phase}
+                        rounds={rounds}
+                        openCards={openCards}
+                        playerCards={[]} // Не показываем карты выбывшему
+                        playersData={playersData}
+                        onMakeMove={() => {}} // Заблокировано
+                        onVote={() => {}} // Заблокировано
+                        onDiscussionEnd={() => {}} // Заблокировано
+                        onVotingEnd={() => {}} // Заблокировано
+                        votingResult={votingResult}
+                     />
+                  </div>
+               </div>
+            </div>
+         </PageLayout>
+      );
+   }
+
    return (
       <PageLayout>
          <Header/>
          <div className="w-75 mx-auto">
+            {isGuest && (
+               <div className="alert alert-info my-3">
+                  <i className="bi bi-person-badge me-2"></i>
+                  Вы играете как гость: <strong>{displayName}</strong>
+               </div>
+            )}
+            
             {loading && (
                <div className="text-center my-4">
                   <div className="spinner-border text-primary"></div>

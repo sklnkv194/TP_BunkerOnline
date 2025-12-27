@@ -1,16 +1,42 @@
 import { useState, useEffect } from "react";
 import Button from "../../ui/Button";
 import { useNavigate } from "react-router-dom";
-import DeleteModal from "../../forms/DeleteModal";
 import { DeleteService } from "../../../scripts/delete-service";
 import { GetService } from "../../../scripts/get-service";
 import { PostService } from "../../../scripts/post-service";
 import { useParams, useSearchParams } from "react-router-dom";
 
+// Хук для получения userId (можно вынести в отдельный файл)
+const useUserId = () => {
+   const [userId, setUserId] = useState(null);
+   const [isGuest, setIsGuest] = useState(false);
+   
+   useEffect(() => {
+      // Проверяем авторизованного пользователя
+      const authUserId = localStorage.getItem('id');
+      const currentUserId = localStorage.getItem('current_user_id');
+      const guestFlag = localStorage.getItem('is_guest');
+      
+      if (authUserId) {
+         // Авторизованный пользователь
+         setUserId(parseInt(authUserId));
+         setIsGuest(false);
+      } else if (currentUserId) {
+         // Гостевой пользователь
+         setUserId(parseInt(currentUserId));
+         setIsGuest(guestFlag === 'true');
+      }
+   }, []);
+   
+   return { userId, isGuest };
+};
+
 const GameWaitingForm = () => {
    const { gameId } = useParams();
    const [searchParams] = useSearchParams();
    const is_owner = searchParams.get('is_owner') === 'true';
+   
+   const { userId, isGuest } = useUserId();
 
    const [roomData, setRoomData] = useState(null);
    const [players, setPlayers] = useState([]);
@@ -18,37 +44,41 @@ const GameWaitingForm = () => {
    const [all_players_count, setAllPlayersCount] = useState(0);
    const [loading, setLoading] = useState(false);
    const [error, setError] = useState("");
-   const [deleteModal, setDeleteModal] = useState({
-      show: false,
-      playerId: null
-   });
    const navigate = useNavigate();
 
    const fetchRoomData = async () => {
       try {
-         const token = localStorage.getItem('token');
-         const user_id = localStorage.getItem('id');
+         // Для гостей не используем токен
+         const token = isGuest ? null : localStorage.getItem('token');
          
-         const result = await GetService.getData(`http://localhost:8000/rooms/${gameId}/`, token);
+         // Добавляем user_id в запрос для всех типов пользователей
+         const params = userId ? `?user_id=${userId}` : '';
+         
+         const result = await GetService.getData(
+            `http://localhost:8000/rooms/${gameId}/${params}`, 
+            token
+         );
          
          if (result) {
             setRoomData(result);
             setPlayers(result.players || []);
             
             setConnectedPlayersCount(result.players_count);
-            setAllPlayersCount(result.max_players );
+            setAllPlayersCount(result.max_players);
 
-            if (parseInt(user_id) && result.players) {
-               const isPlayerInRoom = result.players.some(player => player.id === parseInt(user_id));
+            // Проверяем, находится ли текущий пользователь в комнате
+            if (userId && result.players) {
+               const isPlayerInRoom = result.players.some(player => player.id === userId);
                
                if (!isPlayerInRoom) {
+                  // Если пользователя нет в комнате - возвращаем на главную
                   navigate('/');
                   return;
                }
             }
 
             if (result.status === 'active') {
-               //игра началась - редирект на страницу игры
+               // Игра началась - редирект на страницу игры
                navigate(`/game/${gameId}`);
                return;
             }
@@ -64,6 +94,15 @@ const GameWaitingForm = () => {
 
    useEffect(() => {
       if (!gameId) return;
+      
+      // Если userId еще не определен, ждем немного
+      if (!userId) {
+         const timer = setTimeout(() => {
+            fetchRoomData();
+         }, 500);
+         return () => clearTimeout(timer);
+      }
+      
       fetchRoomData();
       
       const pollInterval = setInterval(() => {
@@ -73,71 +112,118 @@ const GameWaitingForm = () => {
       return () => {
          clearInterval(pollInterval);
       };
-   }, [gameId]);
+   }, [gameId, userId]);
 
    const handleLeaveRoom = async () => {
+      if (!window.confirm("Вы уверены, что хотите покинуть комнату?")) {
+         return;
+      }
+      
       setLoading(true);
       setError("");
       try {
-         const token = localStorage.getItem('token');
-         const user_id = localStorage.getItem('id');
-         const user = parseInt(user_id);
+         // Для DELETE запросов гостям тоже нужен user_id в URL
+         const url = `http://localhost:8000/rooms/${gameId}/players/${userId}/`;
          
          const result = await DeleteService.deleteData(
-            `http://localhost:8000/rooms/${gameId}/players/${user}/`,
-            token
+            url,
+            null // токен не нужен для гостей
          );
          
          if (result) {
+            // Очищаем guest данные при выходе
+            if (isGuest) {
+               localStorage.removeItem('current_user_id');
+               localStorage.removeItem('is_guest');
+               localStorage.removeItem('guest_display_name');
+            }
             navigate('/');
          } else {
             setError(result.data?.error || "Ошибка при выходе из комнаты");
          }
       } catch (error) {
-         setError("Ошибка соединения");
+         setError("Ошибка соединения: " + error.message);
       } finally {
          setLoading(false);
       }
    };
 
    const handleDeleteRoom = async () => {
+      if (!is_owner) return; // Только создатель может удалить комнату
+      
+      if (!window.confirm("Вы уверены, что хотите удалить комнату? Все игроки будут исключены.")) {
+         return;
+      }
+      
       setLoading(true);
       setError("");
       try {
-         const token = localStorage.getItem('token');
-         const result = await DeleteService.deleteData(`http://localhost:8000/rooms/${gameId}/delete/`, token);
+         const token = isGuest ? null : localStorage.getItem('token');
+         const result = await DeleteService.deleteData(
+            `http://localhost:8000/rooms/${gameId}/delete/`, 
+            token
+         );
          
          if (result) {
+            // Очищаем guest данные при удалении комнаты
+            if (isGuest) {
+               localStorage.removeItem('current_user_id');
+               localStorage.removeItem('is_guest');
+               localStorage.removeItem('guest_display_name');
+            }
             navigate('/');
          } else {
             setError(result.data?.error || "Ошибка удаления комнаты");
          }
       } catch (error) {
-         setError("Ошибка соединения");
+         setError("Ошибка соединения: " + error.message);
       } finally {
          setLoading(false);
       }
    };
 
-   const handleDeletePlayer = (playerId) => {
-      setDeleteModal({
-         show: true,
-         playerId,
-         isPlayer: true 
-      });
+   const handleDeletePlayer = async (playerId) => {
+      // Только создатель комнаты может удалять игроков
+      if (!is_owner) return;
+      
+      if (!window.confirm("Вы уверены, что хотите удалить этого игрока из комнаты?")) {
+         return;
+      }
+      
+      setLoading(true);
+      setError("");
+      try {
+         const token = isGuest ? null : localStorage.getItem('token');
+         const result = await DeleteService.deleteData(
+            `http://localhost:8000/rooms/${gameId}/players/${playerId}/`,
+            token
+         );
+         
+         if (result) {
+            // Обновляем список игроков
+            fetchRoomData();
+         } else {
+            setError(result.data?.error || "Ошибка удаления игрока");
+         }
+      } catch (error) {
+         setError("Ошибка соединения: " + error.message);
+      } finally {
+         setLoading(false);
+      }
    };
 
    const handleStartGame = async () => {
+      if (!is_owner) return; // Только создатель может начать игру
+      
       setLoading(true);
       setError("");
       
       try {
-         const token = localStorage.getItem('token');
-         const userId = localStorage.getItem('id');
+         const token = isGuest ? null : localStorage.getItem('token');
          
          const result = await PostService.postData(
             `http://localhost:8000/rooms/${gameId}/start/`,
-            { user_id: parseInt(userId) },
+            { user_id: userId },
             'json',
             token
          );
@@ -147,7 +233,7 @@ const GameWaitingForm = () => {
             setError(result?.error || "Ошибка начала игры");
          }
       } catch (error) {
-         setError("Ошибка соединения");
+         setError("Ошибка соединения: " + error.message);
       } finally {
          setLoading(false);
       }
@@ -189,24 +275,20 @@ const GameWaitingForm = () => {
 
    return (
       <div className="game-room-form form-group w-100">
-         <DeleteModal
-            show={deleteModal.show}
-            onClose={() => setDeleteModal({ show: false, playerId: null })}
-            id={deleteModal.playerId}
-            url={deleteModal.isPlayer 
-               ? `http://localhost:8000/rooms/${gameId}/players`  
-               : `http://localhost:8000/rooms/${gameId}/delete`}      
-         />
-                  
          <div className="room-header mb-4">
             <h2 className="text-center mb-2">Комната #{gameId}</h2>
+            {isGuest && (
+               <div className="alert alert-info text-center">
+                  <i className="bi bi-person-badge me-2"></i>
+                  Вы играете как гость
+               </div>
+            )}
          </div>
          
          <div className="room-info mb-4">
             <div className="row">
                <div className="col-md-6">
                   <div className="card m-4">
-                    
                      <div className="card-body">
                         {getRoomInfoFields().map(field => (
                            <div key={field.id} className={field.wrapperClass}>
@@ -220,9 +302,7 @@ const GameWaitingForm = () => {
                               />
                            </div>
                         ))}
-                        
                      </div>
-                     
                   </div>
                   {is_owner ? (
                      <Button
@@ -234,7 +314,6 @@ const GameWaitingForm = () => {
                         {loading ? "Удаление..." : "Удалить комнату"}
                      </Button>
                   ) : (
-                     
                      <Button
                         variant="secondary"
                         onClick={handleLeaveRoom}
@@ -250,7 +329,7 @@ const GameWaitingForm = () => {
                   <div className="players-card card m-4">
                      <div className="card-header d-flex justify-content-between align-items-center">
                         <h5 className="mb-0">Игроки в комнате</h5>
-                           {connected_players_count}/{all_players_count}
+                        <span>{connected_players_count}/{all_players_count}</span>
                      </div>
                      <div className="card-body">
                         <ul className="list-group">
@@ -266,11 +345,12 @@ const GameWaitingForm = () => {
                                        {player.is_owner && (
                                           <span className="badge bg-primary ms-2">Создатель</span>
                                        )}
+                                       {player.id === userId && (
+                                          <span className="badge bg-info ms-2">Вы</span>
+                                       )}
                                     </div>
                                     <div>
-                                       {player.is_owner ? (
-                                          <span className="text-primary">Вы</span>
-                                       ) : is_owner ? (
+                                       {is_owner && !player.is_owner && (
                                           <button 
                                              className="btn btn-sm btn-outline-danger"
                                              onClick={() => handleDeletePlayer(player.id)}
@@ -279,45 +359,38 @@ const GameWaitingForm = () => {
                                           >
                                              <i className="bi bi-person-dash"></i>
                                           </button>
-                                       ) : null}
+                                       )}
                                     </div>
                                  </li>
                               ))
                            )}
                         </ul>
-                        
                      </div>
-                     
                   </div>
-                    {is_owner ? (
-                        <Button
-                           className="ms-4"
-                           onClick={handleStartGame}
-                           disabled={loading || connected_players_count < 3}
-                        >
-                           {loading ? (
-                              <>
-                                 <span className="spinner-border spinner-border-sm me-2"></span>
-                                 Запуск игры...
-                              </>
-                           ) : (
-                              <>
-                        
-                                 Начать игру
-                              </>
-                           )}
-                        </Button>
-                     ) : (
-                        <div className="waiting-text alert alert-info m-4">
-                           <i className="bi bi-clock me-2"></i>
-                           Ожидание начала игры...
-                        </div>
-                     )}
+                  {is_owner ? (
+                     <Button
+                        className="ms-4"
+                        onClick={handleStartGame}
+                        disabled={loading || connected_players_count < 3}
+                     >
+                        {loading ? (
+                           <>
+                              <span className="spinner-border spinner-border-sm me-2"></span>
+                              Запуск игры...
+                           </>
+                        ) : (
+                           "Начать игру"
+                        )}
+                     </Button>
+                  ) : (
+                     <div className="waiting-text alert alert-info m-4">
+                        <i className="bi bi-clock me-2"></i>
+                        Ожидание начала игры...
+                     </div>
+                  )}
                </div>
             </div>
          </div>
-         
-      
          
          {error && (
             <div className="alert alert-danger mt-4">

@@ -31,20 +31,51 @@ const ConnectToRoomForm = ({id=""}) => {
 
    const handleConnectToRoom = async (formData) => {
       try{
-         const user_id = localStorage.getItem('id');
          setLoading(true);
-         const result = await PostService.postData('http://localhost:8000/rooms/join_room/', {
-               code: formData.room_code,
-               user_id: parseInt(user_id) 
-            }, 'json');
+         setInternalError("");
+         
+         // Получаем user_id из localStorage (если есть)
+         let user_id = localStorage.getItem('id');
+         let requestData = { code: formData.room_code };
+         
+         // Если пользователь авторизован - добавляем user_id
+         if (user_id) {
+            requestData.user_id = parseInt(user_id);
+         }
+         // Если не авторизован - не передаем user_id, бэкенд создаст временного
+         
+         const result = await PostService.postData(
+            'http://localhost:8000/rooms/join_room/', 
+            requestData, 
+            'json'
+         );
+         
          if (result && result.ok){
-            const roomId = result.data.room_code;
+            // Сохраняем user_id, который вернул бэкенд (особенно важно для гостей)
+            const { user_id: returnedUserId, display_name, is_guest, room_code } = result.data;
+            
+            // Сохраняем данные в localStorage
+            if (returnedUserId) {
+               localStorage.setItem('current_user_id', returnedUserId);
+               
+               // Если это гость, сохраняем дополнительную информацию
+               if (is_guest) {
+                  localStorage.setItem('is_guest', 'true');
+                  localStorage.setItem('guest_display_name', display_name);
+                  // Для гостей можно сохранить специальный флаг, если нужно
+               } else {
+                  localStorage.setItem('is_guest', 'false');
+               }
+            }
+            
+            const roomId = room_code || result.data.room_code;
             navigate(`/wait_for_game/${roomId}?is_owner=false`);
+            
          } else {
-            setInternalError(result.data.error);
+            setInternalError(result.data?.error || 'Ошибка подключения');
          }
       } catch (error) {
-         setInternalError(error.message);
+         setInternalError(error.message || 'Ошибка подключения');
       } finally {
          setLoading(false);
       }
