@@ -20,6 +20,15 @@ from django.utils import timezone
 from .models import GameState, PlayerCard, Room, RoomPlayer, Card, Deck, Vote
 from collections import Counter
 
+RANDOM_NAMES = [
+    "Анонимный_выживальщик", "Тайный_гость", "Загадочный_странник", 
+    "Неизвестный_игрок", "Случайный_свидетель", "Тень_в_бункере",
+    "Безымянный_герой", "Гость_из_вне", "Номер_шесть", "Посетитель_X",
+    "Игрок_Икс", "Турист", "Новичок", "Прохожий", "Скиталец",
+    "Путник", "Странник", "Гость", "Посетитель", "Аноним",
+    "Незнакомец", "Секретный_агент", "Тайный_игрок", "Инкогнито"
+]
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def deck_list(request):
@@ -228,26 +237,20 @@ def room_detail(request, room_id):
 @permission_classes([AllowAny])
 def join_room(request):
     """
-    Присоединение к комнате по коду 
+    Присоединение к комнате по коду (для авторизованных и неавторизованных)
     """
     code = request.data.get('code', '').strip().upper()
-    user_id = request.data.get('user_id')
     
     if not code:
         return Response({'error': 'Введите код комнаты'}, status=400)
-    
-    if not user_id:
-        return Response({'error': 'Ошибка аутентификации'}, status=400)
     
     try:
         room = Room.objects.get(code=code)
     except Room.DoesNotExist:
         return Response({'error': 'Комната с таким кодом не найдена'}, status=404)
     
-    try:
-        user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        return Response({'error': 'Пользователь не найден'}, status=404)
+    # Получаем или создаем пользователя (работает для авторизованных и неавторизованных)
+    user = get_or_create_guest_user(request)
     
     if room.status != 'waiting':
         return Response({'error': 'Игра уже началась'}, status=400)
@@ -255,16 +258,37 @@ def join_room(request):
     if room.get_players_count() >= room.max_players:
         return Response({'error': 'В комнате нет свободных мест'}, status=400)
     
+    # Проверяем, не присоединился ли уже этот пользователь (по ID)
     if RoomPlayer.objects.filter(room=room, player=user).exists():
         return Response({'error': 'Вы уже в этой комнате'}, status=400)
     
+    # Добавляем игрока в комнату
     RoomPlayer.objects.create(room=room, player=user)
+    
+    # Если пользователь временный, получаем его красивое имя
+    if hasattr(user, 'profile_temp'):
+        # Извлекаем случайное имя из username
+        username_parts = user.username.split('_')
+        if len(username_parts) >= 2 and username_parts[1] in RANDOM_NAMES:
+            display_name = username_parts[1]
+        else:
+            display_name = user.username
+    else:
+        # Для авторизованных пользователей используем nickname из профиля
+        try:
+            user_profile = UserProfile.objects.get(user=user)
+            display_name = user_profile.nickname if user_profile.nickname else user.username
+        except UserProfile.DoesNotExist:
+            display_name = user.username
     
     return Response({
         'message': 'Вы успешно присоединились к комнате',
         'room_id': room.id,
         'room_code': room.code,
         'is_owner': room.creator.id == user.id,
+        'is_guest': hasattr(user, 'profile_temp'),
+        'user_id': user.id,
+        'display_name': display_name,
         'players_count': room.get_players_count()
     })
     
@@ -274,18 +298,19 @@ def join_room(request):
 def start_game(request, room_id):
     """Начало игры в комнате"""
     try:
-        print(f"=== START GAME REQUEST ===")
-        print(f"Room code: {room_id}")
-        print(f"Request data: {request.data}")
-        
         room = get_object_or_404(Room, code=room_id)
         user_id = request.data.get('user_id')
         
         if not user_id:
             return Response({'error': 'Не указан user_id'}, status=400)
         
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'Пользователь не найден'}, status=404)
+        
         # Проверяем, является ли пользователь создателем комнаты
-        if room.creator.id != int(user_id):
+        if room.creator.id != user.id:
             return Response({'error': 'Только создатель может начать игру'}, status=403)
         
         if room.get_players_count() < 2:  # Уменьшил для тестирования
@@ -528,7 +553,6 @@ def game_info(request, room_code):
     Текущее состояние игры (обновляется каждую секунду)
     """
     try:
-        print(f"\n=== GAME_INFO REQUEST ===")
         room = get_object_or_404(Room, code=room_code)
         user_id = request.GET.get('user_id')
         
@@ -537,7 +561,6 @@ def game_info(request, room_code):
         
         try:
             current_user = User.objects.get(id=int(user_id))
-            print(f"User: {current_user.username} (ID: {current_user.id})")
         except (ValueError, User.DoesNotExist):
             return Response({'error': 'Пользователь не найден'}, status=404)
         
@@ -1557,3 +1580,54 @@ def finish_game(request, room_code):
         
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+from django.db import transaction
+from django.contrib.auth.models import User
+import uuid
+
+def get_or_create_guest_user(request):
+    """
+    Создает или получает временного пользователя для неавторизованных
+    """
+    # Проверяем, авторизован ли пользователь
+    if request.user.is_authenticated:
+        return request.user
+    
+    # Для неавторизованных - создаем временного пользователя
+    # Используем сессию для хранения ID временного пользователя
+    guest_id = request.session.get('guest_user_id')
+    
+    if guest_id:
+        try:
+            user = User.objects.get(id=guest_id)
+            # Проверяем, что это временный пользователь (не обычный)
+            if not user.username.startswith('guest_'):
+                # Это обычный пользователь, создаем нового временного
+                user = None
+        except User.DoesNotExist:
+            user = None
+    else:
+        user = None
+    
+    if not user:
+        # Генерируем уникальное имя для гостя
+        random_name = random.choice(RANDOM_NAMES)
+        guest_username = f"guest_{random_name}"
+        
+        with transaction.atomic():
+            # Создаем нового временного пользователя
+            user = User.objects.create_user(
+                username=guest_username,
+                password=None,  # Без пароля
+                is_active=True
+            )
+            
+            # Помечаем как временного пользователя
+            user.profile_temp = True  # Используем custom attribute
+            user.save()
+        
+        # Сохраняем ID в сессии
+        request.session['guest_user_id'] = user.id
+        request.session.set_expiry(60 * 60 * 24)  # Сессия на 24 часа
+    
+    return user
